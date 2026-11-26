@@ -52,6 +52,7 @@ const OPT_OUT_KEYWORDS = new Set([
   "unsubscribe",
   "opt out",
   "optout",
+  "stop promotions",
   "बंद",
   "बंद करो",
   "band",

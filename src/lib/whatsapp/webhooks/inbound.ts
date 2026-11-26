@@ -17,6 +17,8 @@ interface MetaInboundMessage {
   timestamp?: unknown;
   type?: unknown;
   text?: { body?: unknown };
+  /** Quick-reply button taps, e.g. WhatsApp's own "Stop promotions". */
+  button?: { text?: unknown; payload?: unknown };
 }
 
 function toIsoTimestamp(raw: unknown): string {
@@ -149,7 +151,8 @@ export async function handleInboundMessages(
     // Milestone 1 — STOP / UNSUBSCRIBE opts the sender out of every future
     // message from this business; START opts them back in. Applied even
     // when Meta re-delivers a message we already stored (idempotent).
-    const keyword = parseOptKeyword(content);
+    const buttonText = messageType === "button" && typeof raw.button?.text === "string" ? raw.button.text : null;
+    const keyword = parseOptKeyword(content) ?? parseOptKeyword(buttonText);
     if (keyword) {
       // A number can be both a customer and an old lead — opt out both.
       const optLeadId = leadId ?? (await findLead(normalizedFrom))?.id ?? null;

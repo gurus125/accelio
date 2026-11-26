@@ -27,7 +27,7 @@ const blocked = checkCustomerConsent({ whatsapp_consent: true, opted_out_at: "20
 eq(blocked.allowed ? null : blocked.reason, "opted_out", "opt-out reason reported");
 
 // Keywords: only a message that IS the keyword counts.
-for (const t of ["STOP", "stop", " Stop. ", "STOP!", "Unsubscribe", "STOP ALL", "opt out", "बंद", "बंद करो", "Band karo"]) {
+for (const t of ["STOP", "stop", " Stop. ", "STOP!", "Unsubscribe", "STOP ALL", "opt out", "Stop promotions", "बंद", "बंद करो", "Band karo"]) {
   eq(parseOptKeyword(t), "opt_out", `"${t}" opts out`);
 }
 for (const t of ["START", "start", "Unstop", "SUBSCRIBE"]) {
