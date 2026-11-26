@@ -54,15 +54,15 @@ GST tax invoices, inventory, payroll, appointment calendar, multi-branch, custom
 ## Milestones (do them in order, one PR each)
 
 ### Milestone 1 — Pilot blockers
-- [ ] Owner membership: migration with trigger on `businesses` insert creating the owner `business_members` row + backfill for existing businesses without one.
-- [ ] Shared phone normaliser used everywhere; migration to normalise existing phones and a report (not auto-merge) of duplicates.
-- [ ] Import creates a real `visit` event for the last visit date (with service if provided); keep summary note.
-- [ ] Customer consent fields (`whatsapp_consent`, `consent_source`, `consent_at`, `opted_out_at`); inbound STOP/UNSUBSCRIBE sets opt-out; all sends and automations skip opted-out / non-consented customers.
-- [ ] Unique `phone_number_id` across active connections.
-- [ ] Pagination / SQL aggregation for customer, event and analytics queries.
-- [ ] Business-timezone date helpers; fix recurring schedules and daily caps; all tests pass in any TZ.
-- [ ] Customer status derived from the engine (remove manual dropdown or make it a separate "tag").
-- [ ] Webhook signature required when `NODE_ENV=production`; single next.config; rename Reelo → Accelio in UI.
+- [x] Owner membership: migration with trigger on `businesses` insert creating the owner `business_members` row + backfill for existing businesses without one.
+- [x] Shared phone normaliser used everywhere; migration to normalise existing phones and a report (not auto-merge) of duplicates.
+- [x] Import creates a real `visit` event for the last visit date (with service if provided); keep summary note.
+- [x] Customer consent fields (`whatsapp_consent`, `consent_source`, `consent_at`, `opted_out_at`); inbound STOP/UNSUBSCRIBE sets opt-out; all sends and automations skip opted-out / non-consented customers.
+- [x] Unique `phone_number_id` across active connections.
+- [x] Pagination / SQL aggregation for customer, event and analytics queries.
+- [x] Business-timezone date helpers; fix recurring schedules and daily caps; all tests pass in any TZ.
+- [x] Customer status derived from the engine (remove manual dropdown or make it a separate "tag").
+- [x] Webhook signature required when `NODE_ENV=production`; single next.config; rename Reelo → Accelio in UI.
 
 ### Milestone 2 — WhatsApp templates done properly
 - [ ] `message_templates` table (name, category: marketing/utility, language, body with variables, status) seeded with: return reminder, offer, feedback/review request, WhatsApp bill, owner daily digest.
