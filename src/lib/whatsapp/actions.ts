@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { requireBusinessForCurrentUser } from "@/lib/business/queries";
 import { requireOwner } from "@/lib/auth/access";
 import { verifyPhoneNumberId } from "./client";
+import { normalizeIndianMobile } from "@/lib/phone";
 
 export interface ConnectWhatsAppInput {
   phoneNumberId: string;
@@ -127,12 +128,17 @@ export async function addCustomerFromUnknownSender(
     return { error: "This sender is already linked to a customer." };
   }
 
+  const phone = normalizeIndianMobile(unknownMessage.from_phone);
+  if (!phone) {
+    return { error: "This sender's number isn't a valid Indian mobile number, so it can't be saved as a customer." };
+  }
+
   const { data: newCustomer, error: createError } = await supabase
     .from("customers")
     .insert({
       business_id: business.id,
       name: trimmedName,
-      phone: unknownMessage.from_phone,
+      phone,
       status: "active",
     })
     .select("id")

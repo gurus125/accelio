@@ -25,11 +25,15 @@ export function RealCustomersContent({ customers }: { customers: RealCustomer[] 
   const [query, setQuery] = React.useState("");
   const [filter, setFilter] = React.useState<CustomerStatus | "all">("all");
 
+  // Phones are stored as "+91XXXXXXXXXX"; match on digits so "98765 43210"
+  // finds them too.
+  const queryDigits = query.replace(/\D/g, "").replace(/^(91|0)(?=\d{10}$)/, "");
   const filtered = customers.filter((c) => {
     const matchesQuery =
       query.trim().length === 0 ||
       c.name.toLowerCase().includes(query.toLowerCase()) ||
-      c.phone.includes(query);
+      c.phone.includes(query) ||
+      (queryDigits.length >= 3 && c.phone.replace(/\D/g, "").includes(queryDigits));
     const matchesFilter = filter === "all" || c.status === filter;
     return matchesQuery && matchesFilter;
   });

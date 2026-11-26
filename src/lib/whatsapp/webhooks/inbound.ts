@@ -8,7 +8,7 @@
  */
 
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { normalizePhoneForWhatsApp } from "../phone";
+import { normalizeIndianMobile } from "@/lib/phone";
 
 interface MetaInboundMessage {
   id?: unknown;
@@ -54,43 +54,42 @@ export async function handleInboundMessages(
 
   const businessId = connection.business_id as string;
 
-  // 2. Load this business's customers once, so every inbound message in
-  // this batch can be matched by normalized phone without N lookups.
-  const { data: customers, error: customersError } = await admin
-    .from("customers")
-    .select("id, phone")
-    .eq("business_id", businessId);
-
-  if (customersError) {
-    console.error("[whatsapp/webhooks] Failed to load customers for inbound matching.", customersError.message);
-    return;
+  // 2. Match each sender against this business's customers and leads by
+  // exact normalised phone. Phones are stored as "+91XXXXXXXXXX" everywhere
+  // (lib/phone.ts), so these are indexed point lookups — no loading every
+  // customer into memory (which also silently stopped at 1,000 rows).
+  async function findCustomerId(phone: string): Promise<string | null> {
+    const { data, error } = await admin
+      .from("customers")
+      .select("id")
+      .eq("business_id", businessId)
+      .eq("phone", phone)
+      .limit(1)
+      .maybeSingle();
+    if (error) {
+      console.error("[whatsapp/webhooks] Failed to match inbound sender to a customer.", error.message);
+      return null;
+    }
+    return (data?.id as string | undefined) ?? null;
   }
 
-  const phoneToCustomerId = new Map<string, string>();
-  for (const customer of (customers ?? []) as { id: string; phone: string }[]) {
-    const normalized = normalizePhoneForWhatsApp(customer.phone);
-    if (normalized) phoneToCustomerId.set(normalized, customer.id);
-  }
-
-  // Phase 13 — also match against this business's leads by normalized
-  // phone, so a reply from someone who hasn't (yet) become a customer
-  // still shows up on their lead record rather than as an "unknown
-  // sender". A phone that matches BOTH is treated as the customer (once
-  // someone is a real customer, that's the primary record) — see the
-  // `customerId` check below, which always takes precedence.
-  const { data: leads, error: leadsError } = await admin
-    .from("leads")
-    .select("id, phone_normalized, status")
-    .eq("business_id", businessId)
-    .not("phone_normalized", "is", null);
-
-  if (leadsError) {
-    console.error("[whatsapp/webhooks] Failed to load leads for inbound matching.", leadsError.message);
-  }
-
-  const phoneToLead = new Map<string, { id: string; status: string }>();
-  for (const lead of (leads ?? []) as { id: string; phone_normalized: string; status: string }[]) {
-    phoneToLead.set(lead.phone_normalized, { id: lead.id, status: lead.status });
+  // Phase 13 — also match against this business's leads, so a reply from
+  // someone who hasn't (yet) become a customer still shows up on their
+  // lead record. A phone that matches BOTH is treated as the customer.
+  async function findLead(phone: string): Promise<{ id: string; status: string } | null> {
+    const { data, error } = await admin
+      .from("leads")
+      .select("id, status")
+      .eq("business_id", businessId)
+      .eq("phone_normalized", phone)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (error) {
+      console.error("[whatsapp/webhooks] Failed to match inbound sender to a lead.", error.message);
+      return null;
+    }
+    return data ? { id: data.id as string, status: data.status as string } : null;
   }
 
   for (const raw of messages as MetaInboundMessage[]) {
@@ -98,13 +97,11 @@ export async function handleInboundMessages(
     const fromRaw = typeof raw.from === "string" ? raw.from : null;
     if (!providerMessageId || !fromRaw) continue;
 
-    // Meta sends `from` as digits with country code (e.g. "919876543210"),
-    // which is already our normalized shape — but run it through the same
-    // normalizer used everywhere else so matching is always apples-to-apples
-    // with how customer phone numbers are normalized (see phone.ts).
-    const normalizedFrom = normalizePhoneForWhatsApp(fromRaw) ?? fromRaw;
-    const customerId = phoneToCustomerId.get(normalizedFrom) ?? null;
-    const matchedLead = customerId ? null : phoneToLead.get(normalizedFrom) ?? null;
+    // Meta sends `from` as "919876543210"; store and match it in the one
+    // canonical "+91XXXXXXXXXX" shape used everywhere (lib/phone.ts).
+    const normalizedFrom = normalizeIndianMobile(fromRaw) ?? fromRaw;
+    const customerId = await findCustomerId(normalizedFrom);
+    const matchedLead = customerId ? null : await findLead(normalizedFrom);
     const leadId = matchedLead?.id ?? null;
 
     const receivedAt = toIsoTimestamp(raw.timestamp);

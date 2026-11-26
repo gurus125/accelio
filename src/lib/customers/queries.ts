@@ -68,3 +68,36 @@ export async function listEventsForCustomer(customerId: string): Promise<Custome
   if (error) throw new Error(error.message);
   return (data ?? []) as CustomerEventRow[];
 }
+
+export interface CustomerPhoneIssue {
+  customer_id: string;
+  name: string;
+  phone: string;
+  normalized_phone: string | null;
+  issue: "duplicate" | "invalid_phone";
+}
+
+/** Milestone 1 — the duplicate/invalid-phone report from the
+ * `customer_phone_issues` view (migration 0016). Report only: nothing is
+ * merged automatically; the owner opens each customer and decides. */
+export async function listCustomerPhoneIssues(
+  businessId: string,
+  supabase: SupabaseClient = createClient()
+): Promise<CustomerPhoneIssue[]> {
+  const { data, error } = await supabase
+    .from("customer_phone_issues")
+    .select("customer_id, name, phone, normalized_phone, issue")
+    .eq("business_id", businessId)
+    .order("issue")
+    .order("normalized_phone")
+    .order("created_at")
+    .limit(200);
+
+  if (error) {
+    // The view only exists once migration 0016 is applied — never break the
+    // customers page because of a missing report.
+    console.error("[customers/queries] Couldn't load phone issues report.", error.message);
+    return [];
+  }
+  return (data ?? []) as CustomerPhoneIssue[];
+}

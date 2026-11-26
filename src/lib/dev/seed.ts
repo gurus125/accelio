@@ -19,14 +19,14 @@ interface DemoCustomer {
 }
 
 const DEMO_CUSTOMERS: DemoCustomer[] = [
-  { name: "Rahul Sharma", phone: "9876543210", status: "due", visits: [{ service: "Haircut", amount: 500, daysAgo: 74 }, { service: "Beard Trim", amount: 250, daysAgo: 120 }] },
-  { name: "Priya Verma", phone: "9821345678", status: "inactive", visits: [{ service: "Facial", amount: 1200, daysAgo: 92 }] },
-  { name: "Aman Gupta", phone: "9911223344", status: "active", visits: [{ service: "Haircut", amount: 500, daysAgo: 12 }] },
-  { name: "Neha Singh", phone: "9765432109", status: "inactive", visits: [{ service: "Hair Color", amount: 2200, daysAgo: 130 }] },
-  { name: "Rohit Mehta", phone: "9898989898", status: "due", visits: [{ service: "Haircut", amount: 500, daysAgo: 58 }] },
-  { name: "Simran Kaur", phone: "9654321098", status: "active", visits: [{ service: "Manicure", amount: 600, daysAgo: 8 }] },
-  { name: "Pooja Arora", phone: "9012345678", status: "active", visits: [{ service: "Hair Spa", amount: 1500, daysAgo: 3 }] },
-  { name: "Divya Menon", phone: "9556677889", status: "follow_up", visits: [{ service: "Facial", amount: 1200, daysAgo: 2 }] },
+  { name: "Rahul Sharma", phone: "+919876543210", status: "due", visits: [{ service: "Haircut", amount: 500, daysAgo: 74 }, { service: "Beard Trim", amount: 250, daysAgo: 120 }] },
+  { name: "Priya Verma", phone: "+919821345678", status: "inactive", visits: [{ service: "Facial", amount: 1200, daysAgo: 92 }] },
+  { name: "Aman Gupta", phone: "+919911223344", status: "active", visits: [{ service: "Haircut", amount: 500, daysAgo: 12 }] },
+  { name: "Neha Singh", phone: "+919765432109", status: "inactive", visits: [{ service: "Hair Color", amount: 2200, daysAgo: 130 }] },
+  { name: "Rohit Mehta", phone: "+919898989898", status: "due", visits: [{ service: "Haircut", amount: 500, daysAgo: 58 }] },
+  { name: "Simran Kaur", phone: "+919654321098", status: "active", visits: [{ service: "Manicure", amount: 600, daysAgo: 8 }] },
+  { name: "Pooja Arora", phone: "+919012345678", status: "active", visits: [{ service: "Hair Spa", amount: 1500, daysAgo: 3 }] },
+  { name: "Divya Menon", phone: "+919556677889", status: "follow_up", visits: [{ service: "Facial", amount: 1200, daysAgo: 2 }] },
 ];
 
 /**

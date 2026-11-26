@@ -5,6 +5,8 @@ import { createClient } from "@/lib/supabase/server";
 import { requireBusinessForCurrentUser } from "@/lib/business/queries";
 import { getRemainingCustomerQuota } from "@/lib/billing/limits";
 import type { ImportBatchOutcome, ImportFailure } from "@/types/import";
+import { INVALID_PHONE_MESSAGE, normalizeIndianMobile } from "@/lib/phone";
+import { chunk, fetchAllPages } from "@/lib/supabase/paginate";
 
 /**
  * Returns only the phone numbers already on file for the CURRENT business —
@@ -24,13 +26,15 @@ export async function getExistingPhonesForImport(): Promise<{ error?: string; ph
   }
 
   const supabase = createClient();
-  const { data, error } = await supabase
-    .from("customers")
-    .select("phone")
-    .eq("business_id", business.id);
-
-  if (error) return { error: error.message };
-  return { phones: (data ?? []).map((row) => row.phone) };
+  try {
+    const rows = await fetchAllPages<{ phone: string }>((from, to) =>
+      supabase.from("customers").select("phone").eq("business_id", business.id).order("id").range(from, to)
+    );
+    // Normalised so a legacy un-normalised row still counts as a duplicate.
+    return { phones: rows.map((row) => normalizeIndianMobile(row.phone) ?? row.phone) };
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Couldn't load your existing customers." };
+  }
 }
 
 export interface ImportRowInput {
@@ -79,24 +83,45 @@ export async function importCustomerBatch(rows: ImportRowInput[]): Promise<Impor
     return { error: `A single import batch can include at most ${MAX_BATCH_SIZE} rows.`, insertedCount: 0, failed: [] };
   }
 
+  // Never trust the client's normalisation — re-run the shared normaliser
+  // and refuse rows it can't read.
+  const invalid: ImportFailure[] = [];
+  const seenInBatch = new Set<string>();
+  const normalizedRows: ImportRowInput[] = [];
+  for (const row of rows) {
+    const phone = normalizeIndianMobile(row.phone);
+    if (!phone) {
+      invalid.push({ rowNumber: row.rowNumber, name: row.name, phone: row.phone, reason: INVALID_PHONE_MESSAGE });
+    } else if (seenInBatch.has(phone)) {
+      invalid.push({ rowNumber: row.rowNumber, name: row.name, phone, reason: "Same phone number appears earlier in this file" });
+    } else {
+      seenInBatch.add(phone);
+      normalizedRows.push({ ...row, phone });
+    }
+  }
+  rows = normalizedRows;
+  if (rows.length === 0) return { insertedCount: 0, failed: invalid };
+
   const supabase = createClient();
-  const phones = rows.map((r) => r.phone);
-
-  const { data: existing, error: existingError } = await supabase
-    .from("customers")
-    .select("phone")
-    .eq("business_id", business.id)
-    .in("phone", phones);
-
-  if (existingError) {
-    return { error: existingError.message, insertedCount: 0, failed: [] };
+  // Chunked: `.in()` puts every value in the request URL.
+  const existingSet = new Set<string>();
+  for (const phoneChunk of chunk(rows.map((r) => r.phone), 100)) {
+    const { data: existing, error: existingError } = await supabase
+      .from("customers")
+      .select("phone")
+      .eq("business_id", business.id)
+      .in("phone", phoneChunk);
+    if (existingError) {
+      return { error: existingError.message, insertedCount: 0, failed: [] };
+    }
+    for (const row of existing ?? []) existingSet.add(row.phone as string);
   }
 
-  const existingSet = new Set((existing ?? []).map((row) => row.phone));
   let toInsert = rows.filter((r) => !existingSet.has(r.phone));
-  const skipped: ImportFailure[] = rows
+  const skipped: ImportFailure[] = [...invalid];
+  skipped.push(...rows
     .filter((r) => existingSet.has(r.phone))
-    .map((r) => ({ rowNumber: r.rowNumber, name: r.name, phone: r.phone, reason: "Already exists in your customer list" }));
+    .map((r) => ({ rowNumber: r.rowNumber, name: r.name, phone: r.phone, reason: "Already exists in your customer list" })));
 
   // Phase 16 — a CSV import is the one path that can add many customers in
   // one call, bypassing `createCustomer`'s own per-row check. Rather than

@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { requireBusinessForCurrentUser } from "@/lib/business/queries";
 import { requireOwner, getCurrentUser } from "@/lib/auth/access";
 import { assertCanAddCustomer } from "@/lib/billing/limits";
+import { INVALID_PHONE_MESSAGE, normalizeIndianMobile } from "@/lib/phone";
 import type { CustomerStatus } from "@/types";
 import type { CustomerEventType } from "@/types/database";
 
@@ -30,6 +31,8 @@ export async function createCustomer(input: CustomerInput): Promise<{ error?: st
 
   if (!input.name.trim()) return { error: "Customer name is required." };
   if (!input.phone.trim()) return { error: "Phone number is required." };
+  const phone = normalizeIndianMobile(input.phone);
+  if (!phone) return { error: INVALID_PHONE_MESSAGE };
 
   // Phase 16 — pre-flight, before the row is ever inserted.
   try {
@@ -44,7 +47,7 @@ export async function createCustomer(input: CustomerInput): Promise<{ error?: st
     .insert({
       business_id: business.id,
       name: input.name.trim(),
-      phone: input.phone.trim(),
+      phone,
       status: input.status,
       notes: input.notes?.trim() || null,
     })
@@ -73,13 +76,15 @@ export async function updateCustomer(customerId: string, input: CustomerInput): 
 
   if (!input.name.trim()) return { error: "Customer name is required." };
   if (!input.phone.trim()) return { error: "Phone number is required." };
+  const phone = normalizeIndianMobile(input.phone);
+  if (!phone) return { error: INVALID_PHONE_MESSAGE };
 
   const supabase = createClient();
   const { error } = await supabase
     .from("customers")
     .update({
       name: input.name.trim(),
-      phone: input.phone.trim(),
+      phone,
       status: input.status,
       notes: input.notes?.trim() || null,
     })

@@ -6,6 +6,8 @@
  * asking the owner to check it themselves.
  */
 
+import { normalizeIndianMobile } from "@/lib/phone";
+
 export function normalizeName(raw: string | undefined): string | null {
   const trimmed = (raw ?? "").trim().replace(/\s+/g, " ");
   return trimmed.length > 0 ? trimmed : null;
@@ -19,25 +21,13 @@ export interface PhoneResult {
 
 /** Handles the common Indian formats: 9876543210, +91 9876543210,
  * +919876543210, 91-9876543210, 09876543210 — all normalize to
- * +919876543210. Anything that doesn't reduce to a plausible 10-digit
- * number is left unnormalized and marked invalid, never guessed at. */
+ * +919876543210 via the shared `normalizeIndianMobile`. Anything that
+ * isn't confidently an Indian mobile number is left unnormalized and
+ * marked invalid, never guessed at. */
 export function normalizePhone(raw: string | undefined): PhoneResult {
   const original = (raw ?? "").trim();
-  if (!original) return { value: null, valid: false, raw: original };
-
-  let digits = original.replace(/\D/g, "");
-
-  if (digits.startsWith("91") && digits.length === 12) {
-    digits = digits.slice(2);
-  } else if (digits.startsWith("0") && digits.length === 11) {
-    digits = digits.slice(1);
-  }
-
-  if (digits.length === 10) {
-    return { value: `+91${digits}`, valid: true, raw: original };
-  }
-
-  return { value: null, valid: false, raw: original };
+  const value = normalizeIndianMobile(original);
+  return { value, valid: value !== null, raw: original };
 }
 
 export interface EmailResult {

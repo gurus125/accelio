@@ -1,5 +1,6 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
+import { formatIndianMobile } from "@/lib/phone";
 
 /** Merge Tailwind class names safely, resolving conflicts (shadcn-style helper). */
 export function cn(...inputs: ClassValue[]) {
@@ -32,9 +33,8 @@ export function getInitials(name: string): string {
     .join("");
 }
 
-/** Format a phone number into a readable Indian format. */
+/** Format a phone number into a readable Indian format ("+91 98765 43210").
+ * Uses the shared normaliser so display and storage agree. */
 export function formatPhone(phone: string): string {
-  const digits = phone.replace(/\D/g, "").slice(-10);
-  if (digits.length !== 10) return phone;
-  return `+91 ${digits.slice(0, 5)} ${digits.slice(5)}`;
+  return formatIndianMobile(phone);
 }
