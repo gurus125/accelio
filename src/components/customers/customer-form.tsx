@@ -31,6 +31,8 @@ export function CustomerForm({ customerId, initial, onDone }: CustomerFormProps)
   const [phone, setPhone] = React.useState(initial?.phone ?? "");
   const [status, setStatus] = React.useState<CustomerStatus>(initial?.status ?? "active");
   const [notes, setNotes] = React.useState(initial?.notes ?? "");
+  const [whatsappConsent, setWhatsappConsent] = React.useState(initial?.whatsappConsent ?? false);
+  const optedOutAt = initial?.optedOutAt ?? null;
   const [error, setError] = React.useState<string | null>(null);
   const [submitting, setSubmitting] = React.useState(false);
 
@@ -39,7 +41,7 @@ export function CustomerForm({ customerId, initial, onDone }: CustomerFormProps)
     setError(null);
     setSubmitting(true);
 
-    const input: CustomerInput = { name, phone, status, notes };
+    const input: CustomerInput = { name, phone, status, notes, whatsappConsent };
     const result = customerId ? await updateCustomer(customerId, input) : await createCustomer(input);
 
     setSubmitting(false);
@@ -64,7 +66,37 @@ export function CustomerForm({ customerId, initial, onDone }: CustomerFormProps)
         <label htmlFor="customer-phone" className="text-sm font-medium">
           Phone
         </label>
-        <Input id="customer-phone" value={phone} onChange={(e) => setPhone(e.target.value)} required />
+        <Input
+          id="customer-phone"
+          type="tel"
+          inputMode="tel"
+          autoComplete="tel"
+          placeholder="98765 43210"
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+          required
+        />
+      </div>
+      <div className="rounded-xl border border-border p-3">
+        {optedOutAt ? (
+          <p className="text-sm text-muted-foreground">
+            Opted out of WhatsApp on {new Date(optedOutAt).toLocaleDateString("en-IN")} (replied STOP). They can reply
+            START to opt back in. / ग्राहक ने STOP भेजकर मना किया है।
+          </p>
+        ) : (
+          <label className="flex min-h-11 cursor-pointer items-start gap-3 text-sm">
+            <input
+              type="checkbox"
+              className="mt-0.5 h-5 w-5 shrink-0 accent-brand-600"
+              checked={whatsappConsent}
+              onChange={(e) => setWhatsappConsent(e.target.checked)}
+            />
+            <span>
+              <span className="font-medium">Customer agreed to WhatsApp reminders &amp; offers</span>
+              <span className="block text-muted-foreground">ग्राहक ने WhatsApp पर मैसेज के लिए हाँ कहा</span>
+            </span>
+          </label>
+        )}
       </div>
       <div className="space-y-1.5">
         <label htmlFor="customer-status" className="text-sm font-medium">

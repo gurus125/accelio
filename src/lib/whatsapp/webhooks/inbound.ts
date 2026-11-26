@@ -9,6 +9,7 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { normalizeIndianMobile } from "@/lib/phone";
+import { parseOptKeyword } from "@/lib/consent";
 
 interface MetaInboundMessage {
   id?: unknown;
@@ -142,6 +143,16 @@ export async function handleInboundMessages(
       console.error("[whatsapp/webhooks] Failed to log inbound message event.", eventError.message);
     }
 
+    // Milestone 1 — STOP / UNSUBSCRIBE opts the sender out of every future
+    // message from this business; START opts them back in. Applied even
+    // when Meta re-delivers a message we already stored (idempotent).
+    const keyword = parseOptKeyword(content);
+    if (keyword) {
+      // A number can be both a customer and an old lead — opt out both.
+      const optLeadId = leadId ?? (await findLead(normalizedFrom))?.id ?? null;
+      await applyOptKeyword(admin, businessId, keyword, { customerId, leadId: optLeadId }, receivedAt);
+    }
+
     // Phase 13 — a reply from a lead who hasn't been contacted yet, or
     // is otherwise mid-conversation, moves them to "replied". Never
     // downgrades a lead the owner already marked qualified/converted/lost
@@ -169,5 +180,34 @@ export async function handleInboundMessages(
         console.error("[whatsapp/webhooks] Failed to mark campaign recipient as replied.", recipientError.message);
       }
     }
+  }
+}
+
+/** Records an opt-out (STOP) or opt-in (START) from an inbound message. */
+async function applyOptKeyword(
+  admin: SupabaseClient,
+  businessId: string,
+  keyword: "opt_out" | "opt_in",
+  sender: { customerId: string | null; leadId: string | null },
+  receivedAt: string
+): Promise<void> {
+  if (sender.customerId) {
+    const update =
+      keyword === "opt_out"
+        ? { opted_out_at: receivedAt }
+        : { opted_out_at: null, whatsapp_consent: true, consent_source: "whatsapp", consent_at: receivedAt };
+    let query = admin.from("customers").update(update).eq("business_id", businessId).eq("id", sender.customerId);
+    // Never let an older re-delivered START undo a newer STOP (or vice versa).
+    if (keyword === "opt_out") query = query.is("opted_out_at", null);
+    const { error } = await query;
+    if (error) console.error("[whatsapp/webhooks] Failed to record customer opt-out/in.", error.message);
+  }
+  if (sender.leadId) {
+    const { error } = await admin
+      .from("leads")
+      .update({ opted_out_at: keyword === "opt_out" ? receivedAt : null })
+      .eq("business_id", businessId)
+      .eq("id", sender.leadId);
+    if (error) console.error("[whatsapp/webhooks] Failed to record lead opt-out/in.", error.message);
   }
 }

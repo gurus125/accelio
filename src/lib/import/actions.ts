@@ -73,7 +73,10 @@ export interface ImportRowInput {
 // server-side, independent of how the request was made.
 const MAX_BATCH_SIZE = 500;
 
-export async function importCustomerBatch(rows: ImportRowInput[]): Promise<ImportBatchOutcome> {
+export async function importCustomerBatch(
+  rows: ImportRowInput[],
+  options: { whatsappConsent?: boolean } = {}
+): Promise<ImportBatchOutcome> {
   let business;
   try {
     business = await requireBusinessForCurrentUser();
@@ -149,6 +152,9 @@ export async function importCustomerBatch(rows: ImportRowInput[]): Promise<Impor
     return { insertedCount: 0, failed: skipped };
   }
 
+  const consentGiven = options.whatsappConsent === true;
+  const consentAt = new Date().toISOString();
+
   const { data: inserted, error: insertError } = await supabase
     .from("customers")
     .insert(
@@ -157,6 +163,9 @@ export async function importCustomerBatch(rows: ImportRowInput[]): Promise<Impor
         name: r.name,
         phone: r.phone,
         notes: r.notes,
+        whatsapp_consent: consentGiven,
+        consent_source: consentGiven ? "import" : null,
+        consent_at: consentGiven ? consentAt : null,
       }))
     )
     .select("id, phone");

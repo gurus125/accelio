@@ -106,6 +106,11 @@ export async function convertLeadToCustomer(leadId: string): Promise<{ error?: s
         phone: normalizedLeadPhone,
         status: "active",
         notes: lead.interest ? `From website lead: ${lead.interest}` : "From website lead.",
+        // Milestone 1 — the lead form's consent checkbox carries over.
+        whatsapp_consent: lead.consent_status === "given" && !lead.opted_out_at,
+        consent_source: lead.consent_status === "given" ? "lead" : null,
+        consent_at: lead.consent_status === "given" ? lead.consent_given_at : null,
+        opted_out_at: lead.opted_out_at ?? null,
       })
       .select("id")
       .single();

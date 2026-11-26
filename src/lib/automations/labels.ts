@@ -77,6 +77,8 @@ export const RUN_SKIP_REASON_COPY: Record<string, string> = {
   no_phone: "No phone number on file",
   invalid_phone: "Phone number couldn't be confirmed as a valid WhatsApp number",
   consent_unclear: "Communication permission is unclear, so no automated message was sent",
+  opted_out: "They replied STOP and opted out of WhatsApp messages",
+  no_consent: "They haven't agreed to WhatsApp messages yet",
   recently_contacted: "Already contacted recently — waiting out the cooldown",
   conflicting_active_message: "Another message to this person is already in progress",
   unanswered_reply: "They replied and haven't been responded to yet — needs a human reply",

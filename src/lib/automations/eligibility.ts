@@ -8,6 +8,7 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { normalizePhoneForWhatsApp } from "@/lib/whatsapp/phone";
+import { checkCustomerConsent } from "@/lib/consent";
 import { getWhatsAppConnection, findRecentDuplicateMessage } from "@/lib/whatsapp/queries";
 import { isEligibleToday, type OutreachContext } from "@/lib/recommendations/filters";
 import type { LeadRow } from "@/types/database";
@@ -57,13 +58,21 @@ export function hasDelayElapsed(candidate: AutomationCandidate, delayMinutes: nu
   return elapsedMs >= delayMinutes * 60_000;
 }
 
-/** Lead consent gate (spec step 13): only a lead whose Phase 13 consent
- * checkbox was recorded as given may be automatically messaged. Anything
- * else (not recorded, or no lead at all — i.e. an existing customer, whose
- * relationship already implies requested communication) does not block a
- * customer-based automation, but DOES block a lead-based one. */
-export function hasSufficientConsent(lead: LeadRow | null): EligibilityResult {
+/** Consent gate (spec step 13). Leads: only a lead whose Phase 13 consent
+ * checkbox was recorded as given, and who hasn't replied STOP, may be
+ * automatically messaged. Customers (Milestone 1): only with recorded
+ * WhatsApp consent and no opt-out — see src/lib/consent.ts. */
+export function hasSufficientConsent(lead: LeadRow | null, candidate?: AutomationCandidate): EligibilityResult {
+  // Milestone 1 — customers need recorded consent and no opt-out. A
+  // customer candidate without consent data fails closed.
+  if (candidate?.customerId) {
+    const check = checkCustomerConsent(candidate.customerConsent ?? {});
+    if (!check.allowed) return { eligible: false, reason: check.reason, detail: check.message };
+  }
   if (!lead) return { eligible: true };
+  if (lead.opted_out_at) {
+    return { eligible: false, reason: "opted_out", detail: "This lead replied STOP and opted out of WhatsApp messages." };
+  }
   if (lead.consent_status === "given") return { eligible: true };
   return {
     eligible: false,
@@ -114,7 +123,7 @@ export async function checkCandidateEligibility(params: EligibilityCheckParams):
     return { eligible: false, reason: "invalid_phone", detail: "Phone number couldn't be confirmed as valid." };
   }
 
-  const consent = hasSufficientConsent(lead);
+  const consent = hasSufficientConsent(lead, candidate);
   if (!consent.eligible) return consent;
 
   if (!hasDelayElapsed(candidate, automation.delay_minutes, now)) {

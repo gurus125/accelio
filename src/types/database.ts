@@ -1,3 +1,4 @@
+import type { ConsentSource } from "@/lib/consent";
 /**
  * Row shapes for the Phase 4 Supabase tables. These mirror
  * `supabase/migrations/0001_phase4_core_schema.sql` exactly — if a column
@@ -35,6 +36,11 @@ export interface CustomerRow {
   status: CustomerStatus;
   tags: string[];
   notes: string | null;
+  /** Milestone 1 (migration 0018) — see src/lib/consent.ts. */
+  whatsapp_consent: boolean;
+  consent_source: ConsentSource | null;
+  consent_at: string | null;
+  opted_out_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -95,6 +101,8 @@ export interface LeadRow {
   consent_status: LeadConsentStatus | null;
   consent_text: string | null;
   consent_given_at: string | null;
+  /** Milestone 1 — set when the lead replies STOP on WhatsApp. */
+  opted_out_at?: string | null;
   captured_at: string;
   last_contacted_at: string | null;
   converted_at: string | null;

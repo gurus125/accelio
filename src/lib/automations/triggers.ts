@@ -16,8 +16,13 @@ import type { OpportunityType } from "@/lib/opportunities/types";
 import { listCustomers, listEventsForBusiness } from "@/lib/customers/queries";
 import { listLeadsForBusiness } from "@/lib/leads/queries";
 import { findDueRecurringSchedules, periodKeyForRecurringSchedule } from "@/lib/recurring-schedules/queries";
-import type { BusinessRow } from "@/types/database";
+import type { BusinessRow, CustomerRow } from "@/types/database";
+import type { CustomerConsentFields } from "@/lib/consent";
 import type { AutomationCandidate, AutomationType } from "./types";
+
+function pickConsent(customer: CustomerRow | undefined): CustomerConsentFields | undefined {
+  return customer ? { whatsapp_consent: customer.whatsapp_consent, opted_out_at: customer.opted_out_at } : undefined;
+}
 
 /** Maps each opportunity-based automation type to the one `OpportunityType`
  * it's allowed to act on. */
@@ -79,6 +84,7 @@ export async function findOpportunityBasedCandidates(
   ]);
   const eventsByCustomer = groupEventsByCustomer(events);
   const opportunities = calculateOpportunities(customers, eventsByCustomer, business, serviceBaselines, now);
+  const customerById = new Map(customers.map((c) => [c.id, c]));
 
   return opportunities
     .filter((opportunity) => opportunity.type === opportunityType)
@@ -92,6 +98,7 @@ export async function findOpportunityBasedCandidates(
       triggeredAt: now,
       templateContext: { customerName: opportunity.customerName },
       phone: opportunity.customerPhone,
+      customerConsent: pickConsent(customerById.get(opportunity.customerId)),
     }));
 }
 
@@ -119,6 +126,7 @@ export async function findRecurringScheduleCandidates(
     triggeredAt: now,
     templateContext: { customerName: customer.name, reminderLabel: schedule.label },
     phone: customer.phone,
+    customerConsent: pickConsent(customer),
   }));
 }
 

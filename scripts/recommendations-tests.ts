@@ -137,6 +137,11 @@ function makeCustomer(overrides: Partial<CustomerRow>): CustomerRow {
     status: "active",
     tags: [],
     notes: null,
+    // Milestone 1 — a customer who agreed to WhatsApp messages.
+    whatsapp_consent: true,
+    consent_source: "manual",
+    consent_at: iso(daysAgo(400)),
+    opted_out_at: null,
     created_at: iso(daysAgo(400)),
     updated_at: iso(daysAgo(400)),
     ...overrides,

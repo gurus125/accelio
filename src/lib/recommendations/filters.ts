@@ -26,15 +26,15 @@ export interface OutreachContext {
 /**
  * Whether an opportunity is worth surfacing as a recommendation today.
  *
- * Note on the field Phase 12's spec calls "opted out of marketing
- * communication, if such a field exists": no such field exists anywhere
- * in the `customers` schema (Phase 4-11) — this check is intentionally
- * omitted rather than invented, and is called out as a limitation in the
- * Phase 12 report.
+ * Milestone 1: customers who replied STOP or never agreed to WhatsApp
+ * messages are never recommended for a send (`customerCanMessage`).
  */
 export function isEligibleToday(opportunity: Opportunity, context: OutreachContext, now: Date = new Date()): boolean {
   // No usable WhatsApp number — nothing actionable to recommend.
   if (!normalizePhoneForWhatsApp(opportunity.customerPhone)) return false;
+
+  // Opted out, or no recorded consent — don't suggest messaging them.
+  if (opportunity.customerCanMessage === false) return false;
 
   // The customer already replied and hasn't been responded to since —
   // that needs the owner's personal attention, not another

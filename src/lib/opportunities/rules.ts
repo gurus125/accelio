@@ -17,6 +17,7 @@ import type { Opportunity, OpportunitySource, OpportunityRule, OpportunityType, 
 import { computeConfidence, computeScore } from "./scoring";
 import { resolveExpectedInterval } from "./service-defaults";
 import { HIGH_VALUE_SPEND_THRESHOLD, INACTIVE_DAYS_THRESHOLD, RETURN_OVERDUE_MULTIPLIER } from "./constants";
+import { canMessageCustomer } from "@/lib/consent";
 
 interface BuildOpportunityOptions {
   source?: OpportunitySource;
@@ -39,6 +40,7 @@ function buildOpportunity(
     customerId: customer.id,
     customerName: customer.name,
     customerPhone: customer.phone,
+    customerCanMessage: canMessageCustomer(customer),
     type,
     title,
     explanation,

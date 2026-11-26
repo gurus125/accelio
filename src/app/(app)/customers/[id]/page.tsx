@@ -125,7 +125,14 @@ export default async function CustomerProfilePage({ params }: { params: { id: st
           <div className="flex gap-2">
             <EditCustomerButton
               customerId={customer.id}
-              initial={{ name: customer.name, phone: customer.phone, status: customer.status, notes: customer.notes ?? "" }}
+              initial={{
+                name: customer.name,
+                phone: customer.phone,
+                status: customer.status,
+                notes: customer.notes ?? "",
+                whatsappConsent: customer.whatsapp_consent === true,
+                optedOutAt: customer.opted_out_at ?? null,
+              }}
             />
             <DeleteCustomerDialog customerId={customer.id} customerName={customer.name} redirectTo="/customers" />
           </div>
@@ -143,6 +150,13 @@ export default async function CustomerProfilePage({ params }: { params: { id: st
                   <StatusBadge status={customer.status} />
                   {timeline.some((entry) => entry.direction === "inbound") && (
                     <Badge variant="success">Customer replied</Badge>
+                  )}
+                  {customer.opted_out_at ? (
+                    <Badge variant="danger">WhatsApp: opted out</Badge>
+                  ) : customer.whatsapp_consent ? (
+                    <Badge variant="success">WhatsApp: agreed</Badge>
+                  ) : (
+                    <Badge variant="warning">WhatsApp: no consent yet</Badge>
                   )}
                 </div>
                 <p className="mt-0.5 text-sm text-muted-foreground">{formatPhone(customer.phone)}</p>

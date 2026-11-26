@@ -1,6 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { chunk } from "@/lib/supabase/paginate";
+import { canMessageCustomer } from "@/lib/consent";
 import { createClient } from "@/lib/supabase/server";
 import { requireBusinessForCurrentUser } from "@/lib/business/queries";
 import { requireOwner } from "@/lib/auth/access";
@@ -107,15 +109,23 @@ export async function addRecipients(campaignId: string, customerIds: string[]): 
   // Re-verify every customer id actually belongs to this business — never
   // trust a client-supplied id list beyond that check (RLS enforces the
   // same on insert, this is defense in depth for a clearer error).
-  const { data: ownedCustomers, error: ownedError } = await supabase
-    .from("customers")
-    .select("id")
-    .eq("business_id", business.id)
-    .in("id", customerIds);
-
-  if (ownedError) return { error: "Couldn't verify customers. Please try again." };
-  const validIds = (ownedCustomers ?? []).map((c) => c.id as string);
-  if (validIds.length === 0) return { error: "No valid customers to add." };
+  // Milestone 1 — only customers who agreed to WhatsApp and haven't
+  // opted out can be added. Chunked: `.in()` puts every id in the URL.
+  const validIds: string[] = [];
+  for (const ids of chunk(customerIds, 150)) {
+    const { data: ownedCustomers, error: ownedError } = await supabase
+      .from("customers")
+      .select("id, whatsapp_consent, opted_out_at")
+      .eq("business_id", business.id)
+      .in("id", ids);
+    if (ownedError) return { error: "Couldn't verify customers. Please try again." };
+    for (const c of ownedCustomers ?? []) {
+      if (canMessageCustomer(c as { whatsapp_consent: boolean; opted_out_at: string | null })) validIds.push(c.id as string);
+    }
+  }
+  if (validIds.length === 0) {
+    return { error: "None of these customers can be messaged — they haven't agreed to WhatsApp messages or have opted out." };
+  }
 
   const { error } = await supabase.from("campaign_recipients").upsert(
     validIds.map((customerId) => ({

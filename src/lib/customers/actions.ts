@@ -14,6 +14,10 @@ export interface CustomerInput {
   phone: string;
   status: CustomerStatus;
   notes?: string;
+  /** Milestone 1 — staff ticked "customer agreed to WhatsApp messages". */
+  whatsappConsent?: boolean;
+  /** Read-only, for the edit form: set when the customer replied STOP. */
+  optedOutAt?: string | null;
 }
 
 /** Every mutation below derives `business_id` from the authenticated
@@ -50,6 +54,9 @@ export async function createCustomer(input: CustomerInput): Promise<{ error?: st
       phone,
       status: input.status,
       notes: input.notes?.trim() || null,
+      whatsapp_consent: input.whatsappConsent === true,
+      consent_source: input.whatsappConsent === true ? "manual" : null,
+      consent_at: input.whatsappConsent === true ? new Date().toISOString() : null,
     })
     .select("id")
     .single();
@@ -80,6 +87,27 @@ export async function updateCustomer(customerId: string, input: CustomerInput): 
   if (!phone) return { error: INVALID_PHONE_MESSAGE };
 
   const supabase = createClient();
+
+  // Consent: only record a new consent timestamp when it actually changes
+  // from "no" to "yes"; un-ticking withdraws it. Opt-out (STOP) is never
+  // cleared from here — only the customer can undo it by replying START.
+  const consentUpdate: Record<string, unknown> = {};
+  if (typeof input.whatsappConsent === "boolean") {
+    const { data: current } = await supabase
+      .from("customers")
+      .select("whatsapp_consent")
+      .eq("id", customerId)
+      .eq("business_id", business.id)
+      .maybeSingle();
+    if (current && current.whatsapp_consent !== input.whatsappConsent) {
+      consentUpdate.whatsapp_consent = input.whatsappConsent;
+      if (input.whatsappConsent) {
+        consentUpdate.consent_source = "manual";
+        consentUpdate.consent_at = new Date().toISOString();
+      }
+    }
+  }
+
   const { error } = await supabase
     .from("customers")
     .update({
@@ -87,6 +115,7 @@ export async function updateCustomer(customerId: string, input: CustomerInput): 
       phone,
       status: input.status,
       notes: input.notes?.trim() || null,
+      ...consentUpdate,
     })
     .eq("id", customerId)
     .eq("business_id", business.id);

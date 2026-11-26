@@ -64,7 +64,7 @@ export async function seedDemoCustomers(): Promise<{ error?: string; inserted?: 
   for (const demo of DEMO_CUSTOMERS) {
     const { data: customer, error: customerError } = await supabase
       .from("customers")
-      .insert({ business_id: business.id, name: demo.name, phone: demo.phone, status: demo.status })
+      .insert({ business_id: business.id, name: demo.name, phone: demo.phone, status: demo.status, whatsapp_consent: true, consent_source: "manual", consent_at: new Date().toISOString() })
       .select("id")
       .single();
 

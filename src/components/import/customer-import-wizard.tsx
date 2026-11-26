@@ -42,6 +42,7 @@ export function CustomerImportWizard() {
   const [resultSkippedDuplicates, setResultSkippedDuplicates] = React.useState(0);
   const [resultFailed, setResultFailed] = React.useState<ImportFailure[]>([]);
   const [resultWarnings, setResultWarnings] = React.useState<string[]>([]);
+  const [consentConfirmed, setConsentConfirmed] = React.useState(false);
 
   const reset = () => {
     setStep("upload");
@@ -55,6 +56,8 @@ export function CustomerImportWizard() {
     setResultImported(0);
     setResultSkippedDuplicates(0);
     setResultFailed([]);
+    setResultWarnings([]);
+    setConsentConfirmed(false);
   };
 
   const loadSheet = (workbook: ParsedWorkbook, sheetName: string) => {
@@ -131,7 +134,7 @@ export function CustomerImportWizard() {
         notes: r.notes,
       }));
 
-      const outcome = await importCustomerBatch(input);
+      const outcome = await importCustomerBatch(input, { whatsappConsent: consentConfirmed });
       imported += outcome.insertedCount;
       failed.push(...outcome.failed);
       if (outcome.error) {
@@ -208,7 +211,14 @@ export function CustomerImportWizard() {
         )}
 
         {step === "review" && (
-          <ImportReviewStep rows={rows} summary={summary} onBack={() => setStep("map")} onImport={handleImport} />
+          <ImportReviewStep
+            rows={rows}
+            summary={summary}
+            onBack={() => setStep("map")}
+            onImport={handleImport}
+            consentConfirmed={consentConfirmed}
+            onConsentChange={setConsentConfirmed}
+          />
         )}
 
         {step === "importing" && <ImportProgress done={progressDone} total={progressTotal} />}
