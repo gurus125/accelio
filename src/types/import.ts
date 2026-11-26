@@ -1,6 +1,6 @@
 /** Types for the Phase 5 CSV/Excel customer import wizard. */
 
-export type ReeloField = "name" | "phone" | "email" | "lastVisit" | "totalSpent" | "visitCount" | "notes";
+export type ReeloField = "name" | "phone" | "email" | "lastVisit" | "service" | "totalSpent" | "visitCount" | "notes";
 
 export interface ReeloFieldDef {
   id: ReeloField;
@@ -13,6 +13,7 @@ export const REELO_FIELDS: ReeloFieldDef[] = [
   { id: "phone", label: "Phone", required: true },
   { id: "email", label: "Email", required: false },
   { id: "lastVisit", label: "Last Visit", required: false },
+  { id: "service", label: "Last Service", required: false },
   { id: "totalSpent", label: "Total Spent", required: false },
   { id: "visitCount", label: "Visit Count", required: false },
   { id: "notes", label: "Notes", required: false },
@@ -32,6 +33,7 @@ export interface NormalizedImportRow {
   email: string | null;
   lastVisit: string | null; // ISO date (yyyy-mm-dd)
   lastVisitRaw: string;
+  service: string | null;
   totalSpent: number | null;
   visitCount: number | null;
   notes: string | null;

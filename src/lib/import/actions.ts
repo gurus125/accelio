@@ -7,6 +7,8 @@ import { getRemainingCustomerQuota } from "@/lib/billing/limits";
 import type { ImportBatchOutcome, ImportFailure } from "@/types/import";
 import { INVALID_PHONE_MESSAGE, normalizeIndianMobile } from "@/lib/phone";
 import { chunk, fetchAllPages } from "@/lib/supabase/paginate";
+import { buildImportedEvents } from "@/lib/import/events";
+import { getBusinessTimeZone } from "@/lib/dates";
 
 /**
  * Returns only the phone numbers already on file for the CURRENT business —
@@ -43,6 +45,7 @@ export interface ImportRowInput {
   phone: string;
   email: string | null;
   lastVisit: string | null;
+  service?: string | null;
   totalSpent: number | null;
   visitCount: number | null;
   notes: string | null;
@@ -173,33 +176,40 @@ export async function importCustomerBatch(rows: ImportRowInput[]): Promise<Impor
     };
   }
 
-  // Best-effort: one summarizing "imported" activity event per new customer
-  // that actually had spend/visit/date info in the file — never fabricated
-  // individual visit dates we don't have.
-  const events = toInsert
-    .map((row) => {
-      const match = inserted?.find((i) => i.phone === row.phone);
-      if (!match) return null;
-      if (row.totalSpent == null && row.visitCount == null && row.lastVisit == null) return null;
-
-      const noteParts = ["Imported customer record"];
-      if (row.visitCount != null) {
-        noteParts.push(`${row.visitCount} visit${row.visitCount === 1 ? "" : "s"} on record`);
-      }
-
-      return {
-        business_id: business.id,
-        customer_id: match.id,
-        event_type: "other" as const,
-        amount: row.totalSpent,
-        occurred_at: row.lastVisit ?? new Date().toISOString(),
-        notes: noteParts.join(" — "),
-      };
-    })
-    .filter((e): e is NonNullable<typeof e> => e !== null);
+  // Milestone 1 — a real `visit` event on the last-visit date (so the
+  // opportunity engine sees imported customers) plus the summary note.
+  const timeZone = getBusinessTimeZone(business);
+  const now = new Date();
+  const idByPhone = new Map((inserted ?? []).map((i) => [i.phone as string, i.id as string]));
+  const events = toInsert.flatMap((row) => {
+    const customerId = idByPhone.get(row.phone);
+    if (!customerId) return [];
+    const lastVisit = row.lastVisit && /^\d{4}-\d{2}-\d{2}$/.test(row.lastVisit) ? row.lastVisit : null;
+    return buildImportedEvents(
+      customerId,
+      {
+        lastVisit,
+        service: row.service?.slice(0, 100) ?? null,
+        totalSpent: row.totalSpent,
+        visitCount: row.visitCount,
+      },
+      timeZone,
+      now
+    ).map((e) => ({ ...e, business_id: business.id }));
+  });
 
   if (events.length > 0) {
-    await supabase.from("customer_events").insert(events);
+    const { error: eventsError } = await supabase.from("customer_events").insert(events);
+    if (eventsError) {
+      // Customers were saved; only their history didn't. Say so rather
+      // than reporting a clean import.
+      console.error("[import] Failed to save imported visit history.", eventsError.message);
+      return {
+        insertedCount: inserted?.length ?? 0,
+        failed: skipped,
+        error: "Customers were imported, but their last-visit history couldn't be saved. Add visits manually or contact support.",
+      };
+    }
   }
 
   revalidatePath("/customers");

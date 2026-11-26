@@ -23,6 +23,7 @@ export function buildImportRows(
   const totalSpentCol = mappedField(mapping, "totalSpent");
   const visitCountCol = mappedField(mapping, "visitCount");
   const notesCol = mappedField(mapping, "notes");
+  const serviceCol = mappedField(mapping, "service");
 
   return rawRows.map((raw, idx) => {
     // rowNumber: +2 because row 1 is the header and idx is 0-based.
@@ -36,6 +37,7 @@ export function buildImportRows(
     const totalSpent = normalizeAmount(totalSpentCol ? raw[totalSpentCol] : undefined);
     const visitCount = normalizeVisitCount(visitCountCol ? raw[visitCountCol] : undefined);
     const notes = notesCol ? (raw[notesCol] ?? "").trim() || null : null;
+    const service = serviceCol ? (raw[serviceCol] ?? "").trim().slice(0, 100) || null : null;
 
     let invalid = false;
 
@@ -80,6 +82,7 @@ export function buildImportRows(
       email: email.valid ? email.value : null,
       lastVisit: lastVisit.value,
       lastVisitRaw: lastVisit.raw,
+      service,
       totalSpent: totalSpent.valid ? totalSpent.value : null,
       visitCount: visitCount.valid ? visitCount.value : null,
       notes,

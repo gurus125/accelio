@@ -41,6 +41,7 @@ export function CustomerImportWizard() {
   const [resultImported, setResultImported] = React.useState(0);
   const [resultSkippedDuplicates, setResultSkippedDuplicates] = React.useState(0);
   const [resultFailed, setResultFailed] = React.useState<ImportFailure[]>([]);
+  const [resultWarnings, setResultWarnings] = React.useState<string[]>([]);
 
   const reset = () => {
     setStep("upload");
@@ -114,6 +115,7 @@ export function CustomerImportWizard() {
 
     let imported = 0;
     const failed: ImportFailure[] = [];
+    const warnings = new Set<string>();
 
     for (let i = 0; i < candidates.length; i += BATCH_SIZE) {
       const batch = candidates.slice(i, i + BATCH_SIZE);
@@ -123,6 +125,7 @@ export function CustomerImportWizard() {
         phone: r.phone as string,
         email: r.email,
         lastVisit: r.lastVisit,
+        service: r.service,
         totalSpent: r.totalSpent,
         visitCount: r.visitCount,
         notes: r.notes,
@@ -131,6 +134,14 @@ export function CustomerImportWizard() {
       const outcome = await importCustomerBatch(input);
       imported += outcome.insertedCount;
       failed.push(...outcome.failed);
+      if (outcome.error) {
+        if (outcome.insertedCount === 0 && outcome.failed.length === 0) {
+          // The whole batch was refused — report each row, never drop silently.
+          failed.push(...input.map((r) => ({ rowNumber: r.rowNumber, name: r.name, phone: r.phone, reason: outcome.error as string })));
+        } else {
+          warnings.add(outcome.error);
+        }
+      }
       setProgressDone((d) => d + batch.length);
     }
 
@@ -150,6 +161,7 @@ export function CustomerImportWizard() {
     setResultImported(imported);
     setResultSkippedDuplicates(duplicateRowCount + duplicatesSkippedAtImport);
     setResultFailed([...otherFailures, ...needsAttentionFailures]);
+    setResultWarnings(Array.from(warnings));
     setStep("done");
   };
 
@@ -206,6 +218,7 @@ export function CustomerImportWizard() {
             imported={resultImported}
             skippedDuplicates={resultSkippedDuplicates}
             failed={resultFailed}
+            warnings={resultWarnings}
             onImportAnother={reset}
           />
         )}

@@ -10,10 +10,11 @@ interface ImportResultStepProps {
   imported: number;
   skippedDuplicates: number;
   failed: ImportFailure[];
+  warnings?: string[];
   onImportAnother: () => void;
 }
 
-export function ImportResultStep({ imported, skippedDuplicates, failed, onImportAnother }: ImportResultStepProps) {
+export function ImportResultStep({ imported, skippedDuplicates, failed, warnings = [], onImportAnother }: ImportResultStepProps) {
   const downloadErrorReport = () => {
     const csv = toCsv(
       ["Name", "Phone", "Reason"],
@@ -33,6 +34,13 @@ export function ImportResultStep({ imported, skippedDuplicates, failed, onImport
         {skippedDuplicates > 0 && <p>{skippedDuplicates.toLocaleString("en-IN")} duplicates skipped</p>}
         {failed.length > 0 && <p>{failed.length.toLocaleString("en-IN")} rows not imported</p>}
       </div>
+      {warnings.length > 0 && (
+        <div role="alert" className="mt-4 max-w-md rounded-xl border border-amber-300 bg-amber-50 p-3 text-left text-sm dark:border-amber-700 dark:bg-amber-950/30">
+          {warnings.map((w) => (
+            <p key={w}>{w}</p>
+          ))}
+        </div>
+      )}
 
       {/* Phase 20 — after importing, the payoff is Reelo telling you who
           needs attention, not a bare list of rows. Send people to the
