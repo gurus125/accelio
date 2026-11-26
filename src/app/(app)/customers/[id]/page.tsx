@@ -4,6 +4,7 @@ import { ArrowLeft, CalendarDays, Repeat, Wallet, Check, CheckCheck, Send } from
 import { TopBar } from "@/components/layout/topbar";
 import { Avatar } from "@/components/ui/avatar";
 import { StatusBadge } from "@/components/status-badge";
+import { deriveCustomerStatus } from "@/lib/customers/status";
 import { MessageComposer } from "@/components/message-composer";
 import { SendWhatsappButton } from "@/components/send-whatsapp-button";
 import { Card } from "@/components/ui/card";
@@ -128,7 +129,6 @@ export default async function CustomerProfilePage({ params }: { params: { id: st
               initial={{
                 name: customer.name,
                 phone: customer.phone,
-                status: customer.status,
                 notes: customer.notes ?? "",
                 whatsappConsent: customer.whatsapp_consent === true,
                 optedOutAt: customer.opted_out_at ?? null,
@@ -147,7 +147,7 @@ export default async function CustomerProfilePage({ params }: { params: { id: st
               <div>
                 <div className="flex flex-wrap items-center gap-2">
                   <h2 className="text-lg font-semibold">{customer.name}</h2>
-                  <StatusBadge status={customer.status} />
+                  <StatusBadge status={deriveCustomerStatus(opportunity, stats.visitCount)} />
                   {timeline.some((entry) => entry.direction === "inbound") && (
                     <Badge variant="success">Customer replied</Badge>
                   )}

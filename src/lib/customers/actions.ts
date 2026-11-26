@@ -6,13 +6,11 @@ import { requireBusinessForCurrentUser } from "@/lib/business/queries";
 import { requireOwner, getCurrentUser } from "@/lib/auth/access";
 import { assertCanAddCustomer } from "@/lib/billing/limits";
 import { INVALID_PHONE_MESSAGE, normalizeIndianMobile } from "@/lib/phone";
-import type { CustomerStatus } from "@/types";
 import type { CustomerEventType } from "@/types/database";
 
 export interface CustomerInput {
   name: string;
   phone: string;
-  status: CustomerStatus;
   notes?: string;
   /** Milestone 1 — staff ticked "customer agreed to WhatsApp messages". */
   whatsappConsent?: boolean;
@@ -52,7 +50,6 @@ export async function createCustomer(input: CustomerInput): Promise<{ error?: st
       business_id: business.id,
       name: input.name.trim(),
       phone,
-      status: input.status,
       notes: input.notes?.trim() || null,
       whatsapp_consent: input.whatsappConsent === true,
       consent_source: input.whatsappConsent === true ? "manual" : null,
@@ -113,7 +110,6 @@ export async function updateCustomer(customerId: string, input: CustomerInput): 
     .update({
       name: input.name.trim(),
       phone,
-      status: input.status,
       notes: input.notes?.trim() || null,
       ...consentUpdate,
     })

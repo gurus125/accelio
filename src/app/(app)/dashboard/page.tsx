@@ -3,6 +3,7 @@ import { ArrowRight, CalendarClock, UserX, MessageSquare, Tag, Users, UserCheck,
 import { TopBar } from "@/components/layout/topbar";
 import { StatCard } from "@/components/stat-card";
 import { StatusBadge } from "@/components/status-badge";
+import { countCustomersByStatus, deriveCustomerStatus } from "@/lib/customers/status";
 import { OpportunityCard } from "@/components/opportunities/opportunity-card";
 import { getAllOpportunities, getOpportunityCounts } from "@/lib/opportunity-engine";
 import { getCustomerById } from "@/lib/mock-data";
@@ -60,17 +61,25 @@ export default async function DashboardPage() {
     listServiceBaselines(business.id),
   ]);
   const leadFollowUps = buildLeadFollowUps(leads).slice(0, MAX_LEAD_FOLLOWUPS_SHOWN);
-  const counts = {
-    total: customers.length,
-    active: customers.filter((c) => c.status === "active").length,
-    due: customers.filter((c) => c.status === "due").length,
-    inactive: customers.filter((c) => c.status === "inactive").length,
-    followUp: customers.filter((c) => c.status === "follow_up").length,
-  };
-  const recent = customers.slice(0, 5);
-
   const eventsByCustomerId = groupEventsByCustomer(events);
   const opportunities = calculateOpportunities(customers, eventsByCustomerId, business, serviceBaselines);
+
+  // Milestone 1 — statuses come from the engine, never the old dropdown.
+  const opportunityByCustomer = new Map(opportunities.map((o) => [o.customerId, o]));
+  const statusOf = (customerId: string) =>
+    deriveCustomerStatus(
+      opportunityByCustomer.get(customerId),
+      (eventsByCustomerId.get(customerId) ?? []).filter((e) => e.event_type === "visit").length
+    );
+  const statusCounts = countCustomersByStatus(customers.map((c) => statusOf(c.id)));
+  const counts = {
+    total: customers.length,
+    active: statusCounts.active,
+    due: statusCounts.due,
+    inactive: statusCounts.inactive,
+    followUp: statusCounts.follow_up,
+  };
+  const recent = customers.slice(0, 5);
   const opportunityCounts = {
     total: opportunities.length,
     dueToReturn: opportunities.filter((o) => o.type === "due_to_return").length,
@@ -160,7 +169,7 @@ export default async function DashboardPage() {
                       className="flex items-center justify-between px-4 py-3 text-sm transition-colors hover:bg-muted/40"
                     >
                       <span className="font-medium">{c.name}</span>
-                      <StatusBadge status={c.status} />
+                      <StatusBadge status={statusOf(c.id)} />
                     </Link>
                   </li>
                 ))}

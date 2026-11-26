@@ -8,7 +8,9 @@ import { listCustomerPhoneIssues, listCustomers, listEventsForBusiness } from "@
 import { PhoneIssuesCard } from "@/components/customers/phone-issues-card";
 import { computeCustomerStats } from "@/lib/customers/mappers";
 import { buttonVariants } from "@/components/ui/button";
-import type { CustomerEventRow } from "@/types/database";
+import { listServiceBaselines } from "@/lib/opportunities/baselines";
+import { calculateOpportunities, groupEventsByCustomer } from "@/lib/opportunities/calculate";
+import { deriveCustomerStatus } from "@/lib/customers/status";
 import type { RealCustomer } from "@/types/database";
 
 export default async function CustomersPage() {
@@ -42,23 +44,28 @@ export default async function CustomersPage() {
     );
   }
 
-  const [rows, events, phoneIssues] = await Promise.all([
+  const [rows, events, phoneIssues, serviceBaselines] = await Promise.all([
     listCustomers(business.id),
     listEventsForBusiness(business.id),
     listCustomerPhoneIssues(business.id),
+    listServiceBaselines(business.id),
   ]);
 
-  const eventsByCustomer = new Map<string, CustomerEventRow[]>();
-  for (const event of events) {
-    const list = eventsByCustomer.get(event.customer_id) ?? [];
-    list.push(event);
-    eventsByCustomer.set(event.customer_id, list);
-  }
+  const eventsByCustomer = groupEventsByCustomer(events);
+  // Milestone 1 — status comes from the same engine as reminders and the
+  // dashboard, never from a hand-set dropdown.
+  const opportunityByCustomer = new Map(
+    calculateOpportunities(rows, eventsByCustomer, business, serviceBaselines).map((o) => [o.customerId, o])
+  );
 
-  const customers: RealCustomer[] = rows.map((row) => ({
-    ...row,
-    ...computeCustomerStats(eventsByCustomer.get(row.id) ?? []),
-  }));
+  const customers: RealCustomer[] = rows.map((row) => {
+    const stats = computeCustomerStats(eventsByCustomer.get(row.id) ?? []);
+    return {
+      ...row,
+      ...stats,
+      derivedStatus: deriveCustomerStatus(opportunityByCustomer.get(row.id), stats.visitCount),
+    };
+  });
 
   return (
     <>

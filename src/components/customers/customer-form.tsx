@@ -9,14 +9,6 @@ import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { InlineError } from "@/components/inline-error";
 import { createCustomer, updateCustomer, type CustomerInput } from "@/lib/customers/actions";
-import type { CustomerStatus } from "@/types";
-
-const STATUS_OPTIONS: { value: CustomerStatus; label: string }[] = [
-  { value: "active", label: "Active" },
-  { value: "due", label: "Due to return" },
-  { value: "inactive", label: "Inactive" },
-  { value: "follow_up", label: "Follow up" },
-];
 
 interface CustomerFormProps {
   /** Present when editing an existing customer; absent when creating a new one. */
@@ -29,7 +21,6 @@ export function CustomerForm({ customerId, initial, onDone }: CustomerFormProps)
   const router = useRouter();
   const [name, setName] = React.useState(initial?.name ?? "");
   const [phone, setPhone] = React.useState(initial?.phone ?? "");
-  const [status, setStatus] = React.useState<CustomerStatus>(initial?.status ?? "active");
   const [notes, setNotes] = React.useState(initial?.notes ?? "");
   const [whatsappConsent, setWhatsappConsent] = React.useState(initial?.whatsappConsent ?? false);
   const optedOutAt = initial?.optedOutAt ?? null;
@@ -41,7 +32,7 @@ export function CustomerForm({ customerId, initial, onDone }: CustomerFormProps)
     setError(null);
     setSubmitting(true);
 
-    const input: CustomerInput = { name, phone, status, notes, whatsappConsent };
+    const input: CustomerInput = { name, phone, notes, whatsappConsent };
     const result = customerId ? await updateCustomer(customerId, input) : await createCustomer(input);
 
     setSubmitting(false);
@@ -97,23 +88,6 @@ export function CustomerForm({ customerId, initial, onDone }: CustomerFormProps)
             </span>
           </label>
         )}
-      </div>
-      <div className="space-y-1.5">
-        <label htmlFor="customer-status" className="text-sm font-medium">
-          Status
-        </label>
-        <select
-          id="customer-status"
-          value={status}
-          onChange={(e) => setStatus(e.target.value as CustomerStatus)}
-          className="flex h-10 w-full rounded-lg border border-border bg-white px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
-        >
-          {STATUS_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
       </div>
       <div className="space-y-1.5">
         <label htmlFor="customer-notes" className="text-sm font-medium">
