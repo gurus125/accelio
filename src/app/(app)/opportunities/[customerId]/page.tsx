@@ -108,7 +108,7 @@ export default async function OpportunityDetailPage({ params }: { params: { cust
 
               <div className="mt-5 border-t border-border pt-5">
                 <h3 className="text-sm font-semibold text-muted-foreground">
-                  Why Reelo flagged {customer.name.split(" ")[0]}
+                  Why Accelio flagged {customer.name.split(" ")[0]}
                 </h3>
                 <p className="mt-1.5 text-base">{opportunity.explanation}</p>
               </div>
@@ -121,7 +121,7 @@ export default async function OpportunityDetailPage({ params }: { params: { cust
               <div className="mt-5 border-t border-border pt-5">
                 <h3 className="font-semibold">Suggested message</h3>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Reelo can draft a message for this — review it, edit it if you like, then send it on WhatsApp
+                  Accelio can draft a message for this — review it, edit it if you like, then send it on WhatsApp
                   when you&apos;re ready.
                 </p>
                 <div className="mt-4">
@@ -163,7 +163,7 @@ export default async function OpportunityDetailPage({ params }: { params: { cust
           <Card className="p-5">
             <p className="font-medium">No action recommended right now</p>
             <p className="mt-1.5 text-sm text-muted-foreground">
-              Reelo doesn&apos;t see anything worth flagging for {customer.name.split(" ")[0]} at the moment.
+              Accelio doesn&apos;t see anything worth flagging for {customer.name.split(" ")[0]} at the moment.
             </p>
           </Card>
         )}

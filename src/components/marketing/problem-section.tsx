@@ -15,8 +15,8 @@ const STEPS = [
   },
   {
     icon: Sparkles,
-    title: "Reelo",
-    description: "Reelo identifies the customers worth contacting and tells the business why.",
+    title: "Accelio",
+    description: "Accelio identifies the customers worth contacting and tells the business why.",
   },
 ];
 

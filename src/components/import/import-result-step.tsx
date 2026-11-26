@@ -20,7 +20,7 @@ export function ImportResultStep({ imported, skippedDuplicates, failed, warnings
       ["Name", "Phone", "Reason"],
       failed.map((f) => [f.name, f.phone, f.reason])
     );
-    downloadCsv("reelo-import-errors.csv", csv);
+    downloadCsv("accelio-import-errors.csv", csv);
   };
 
   return (
@@ -42,7 +42,7 @@ export function ImportResultStep({ imported, skippedDuplicates, failed, warnings
         </div>
       )}
 
-      {/* Phase 20 — after importing, the payoff is Reelo telling you who
+      {/* Phase 20 — after importing, the payoff is Accelio telling you who
           needs attention, not a bare list of rows. Send people to the
           dashboard's recommendations first ("first value moment"); the
           plain customer list is still one click away for anyone who wants
@@ -50,7 +50,7 @@ export function ImportResultStep({ imported, skippedDuplicates, failed, warnings
       <div className="mt-8 flex flex-wrap justify-center gap-3">
         {imported > 0 ? (
           <Link href="/dashboard">
-            <Button>See what Reelo found</Button>
+            <Button>See what Accelio found</Button>
           </Link>
         ) : (
           <Link href="/customers">

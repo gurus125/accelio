@@ -28,6 +28,13 @@ const nextConfig = {
   //     destinations a user might navigate to from this app.
   //   - Permissions-Policy: this app never needs camera/microphone/
   //     geolocation, so explicitly deny them.
+  // The lead-capture widget script is served as /accelio-widget.js. The
+  // old /reelo-widget.js path keeps working for websites that already
+  // embed it (the file on disk is still public/reelo-widget.js).
+  async rewrites() {
+    return [{ source: "/accelio-widget.js", destination: "/reelo-widget.js" }];
+  },
+
   async headers() {
     return [
       {

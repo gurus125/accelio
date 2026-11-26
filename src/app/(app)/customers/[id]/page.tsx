@@ -197,7 +197,7 @@ export default async function CustomerProfilePage({ params }: { params: { id: st
             <>
               <div className="flex flex-wrap items-center gap-2">
                 <h3 className="text-sm font-semibold text-muted-foreground">
-                  Reelo recommendation
+                  Accelio recommendation
                 </h3>
                 <Badge variant={OPPORTUNITY_TONE[opportunity.type]}>{opportunity.title}</Badge>
                 {isRecommendedToday && <Badge variant="success">Recommended today</Badge>}
@@ -211,7 +211,7 @@ export default async function CustomerProfilePage({ params }: { params: { id: st
             </>
           ) : (
             <>
-              <h3 className="text-sm font-semibold text-muted-foreground">Reelo recommendation</h3>
+              <h3 className="text-sm font-semibold text-muted-foreground">Accelio recommendation</h3>
               <p className="mt-1.5 text-sm text-muted-foreground">
                 {stats.visitCount === 0
                   ? "No action recommended right now — not enough visit history yet."
@@ -325,7 +325,7 @@ export default async function CustomerProfilePage({ params }: { params: { id: st
         <Card className="p-5">
           <h3 className="font-semibold">Recurring reminders</h3>
           <p className="mt-1 text-sm text-muted-foreground">
-            Calendar-based reminders (like a monthly fee) — separate from Reelo&apos;s automatic visit-pattern
+            Calendar-based reminders (like a monthly fee) — separate from Accelio&apos;s automatic visit-pattern
             recommendations above.
           </p>
           <div className="mt-3">
@@ -400,7 +400,7 @@ function MockCustomerProfile({ id }: { id: string }) {
         {opportunity && (
           <Card className="p-5">
             <h3 className="text-sm font-semibold text-muted-foreground">
-              Why Reelo recommends contacting {customer.name.split(" ")[0]}
+              Why Accelio recommends contacting {customer.name.split(" ")[0]}
             </h3>
             <p className="mt-1.5 text-base">{opportunity.explanation}</p>
 

@@ -44,7 +44,7 @@ export async function createAutomationAction(
 ): Promise<{ error?: string; automation?: AutomationRow }> {
   if (!input.name.trim()) return { error: "Give this automation a short name." };
   if (input.actionType === "send_whatsapp" && input.messageTemplate && !hasOnlySupportedAutomationVariables(input.messageTemplate)) {
-    return { error: "This message uses a variable Reelo doesn't recognize. Only {{customer_name}}, {{lead_name}}, {{business_name}}, {{interest}} and {{reminder_label}} are supported." };
+    return { error: "This message uses a variable Accelio doesn't recognize. Only {{customer_name}}, {{lead_name}}, {{business_name}}, {{interest}} and {{reminder_label}} are supported." };
   }
 
   const { business } = await requireOwner();
@@ -77,7 +77,7 @@ export async function updateAutomationAction(
   input: QueryUpdateAutomationInput
 ): Promise<{ error?: string }> {
   if (input.messageTemplate && !hasOnlySupportedAutomationVariables(input.messageTemplate)) {
-    return { error: "This message uses a variable Reelo doesn't recognize." };
+    return { error: "This message uses a variable Accelio doesn't recognize." };
   }
   const { business } = await requireOwner();
   await updateAutomation(business.id, automationId, input);

@@ -1,14 +1,14 @@
 /** Types for the Phase 5 CSV/Excel customer import wizard. */
 
-export type ReeloField = "name" | "phone" | "email" | "lastVisit" | "service" | "totalSpent" | "visitCount" | "notes";
+export type AccelioField = "name" | "phone" | "email" | "lastVisit" | "service" | "totalSpent" | "visitCount" | "notes";
 
-export interface ReeloFieldDef {
-  id: ReeloField;
+export interface AccelioFieldDef {
+  id: AccelioField;
   label: string;
   required: boolean;
 }
 
-export const REELO_FIELDS: ReeloFieldDef[] = [
+export const ACCELIO_FIELDS: AccelioFieldDef[] = [
   { id: "name", label: "Name", required: true },
   { id: "phone", label: "Phone", required: true },
   { id: "email", label: "Email", required: false },
@@ -19,8 +19,8 @@ export const REELO_FIELDS: ReeloFieldDef[] = [
   { id: "notes", label: "Notes", required: false },
 ];
 
-/** Maps a column header from the uploaded file to a Reelo field, or null if unmapped. */
-export type ColumnMapping = Record<string, ReeloField | null>;
+/** Maps a column header from the uploaded file to a Accelio field, or null if unmapped. */
+export type ColumnMapping = Record<string, AccelioField | null>;
 
 export type RowValidity = "ready" | "warning" | "invalid";
 

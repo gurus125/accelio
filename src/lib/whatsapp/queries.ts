@@ -426,7 +426,7 @@ export async function listRecentCommunicationForBusiness(
 
 /** Inbound messages that couldn't be matched to any known customer —
  * surfaced on the Activity page so the owner can explicitly add them as a
- * customer rather than Reelo silently creating one. */
+ * customer rather than Accelio silently creating one. */
 export async function listUnknownSendersForBusiness(businessId: string): Promise<CustomerMessageRow[]> {
   const supabase = createClient();
   const { data, error } = await supabase

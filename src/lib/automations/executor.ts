@@ -2,7 +2,7 @@
  * Phase 14 — the automation engine's core run loop. Given one active
  * automation, finds its candidates, checks every safety gate, and — only
  * for a `send_whatsapp` automation whose candidate passes every gate —
- * sends via the exact same reused WhatsApp path every other Reelo message
+ * sends via the exact same reused WhatsApp path every other Accelio message
  * already goes through (`decideSendMode` / `dispatchWhatsAppMessage` /
  * `reserveWhatsAppMessage` / `markMessageSent` / `markMessageFailed`).
  *

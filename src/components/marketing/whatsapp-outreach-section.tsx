@@ -49,7 +49,7 @@ export function WhatsappOutreachSection() {
         <div className="mx-auto mt-8 max-w-lg text-center">
           <p className="text-base font-medium text-foreground">You stay in control.</p>
           <p className="mt-1 text-sm text-muted-foreground">
-            Reelo recommends. You review. You approve. You send.
+            Accelio recommends. You review. You approve. You send.
           </p>
         </div>
       </div>

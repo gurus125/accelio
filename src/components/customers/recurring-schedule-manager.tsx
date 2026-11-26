@@ -127,7 +127,7 @@ export function RecurringScheduleManager({
         open={open}
         onClose={() => setOpen(false)}
         title="Add recurring reminder"
-        description="For calendar-based reminders like a monthly fee — not a visit pattern. Reelo will fire this every month on the same date, once you also create and activate a 'Recurring calendar reminder' automation."
+        description="For calendar-based reminders like a monthly fee — not a visit pattern. Accelio will fire this every month on the same date, once you also create and activate a 'Recurring calendar reminder' automation."
       >
         <form onSubmit={handleCreate} className="space-y-4">
           <InlineError message={error} />

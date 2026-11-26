@@ -12,20 +12,20 @@ import { LeadCaptureSection } from "@/components/marketing/lead-capture-section"
 import { AutomationSection } from "@/components/marketing/automation-section";
 import { AnalyticsSection } from "@/components/marketing/analytics-section";
 import { UseCasesSection } from "@/components/marketing/use-cases-section";
-import { WhyReeloSection } from "@/components/marketing/why-reelo-section";
+import { WhyAccelioSection } from "@/components/marketing/why-accelio-section";
 import { PricingPreviewSection } from "@/components/marketing/pricing-preview-section";
 import { FaqSection } from "@/components/marketing/faq-section";
 import { FinalCtaSection } from "@/components/marketing/final-cta-section";
 import { SiteFooter } from "@/components/marketing/site-footer";
 
 export const metadata: Metadata = {
-  title: "Reelo — Turn Existing Customers Into Repeat Customers",
+  title: "Accelio — Turn Existing Customers Into Repeat Customers",
   description:
-    "Reelo helps local businesses identify customers worth contacting, create personalized messages, reach them through WhatsApp, and bring customers back.",
+    "Accelio helps local businesses identify customers worth contacting, create personalized messages, reach them through WhatsApp, and bring customers back.",
   openGraph: {
-    title: "Reelo — Turn Existing Customers Into Repeat Customers",
+    title: "Accelio — Turn Existing Customers Into Repeat Customers",
     description:
-      "Reelo helps local businesses identify customers worth contacting, create personalized messages, reach them through WhatsApp, and bring customers back.",
+      "Accelio helps local businesses identify customers worth contacting, create personalized messages, reach them through WhatsApp, and bring customers back.",
     type: "website",
   },
 };
@@ -57,7 +57,7 @@ export default function LandingPage() {
       <Reveal><AutomationSection /></Reveal>
       <Reveal><AnalyticsSection /></Reveal>
       <Reveal><UseCasesSection /></Reveal>
-      <Reveal><WhyReeloSection /></Reveal>
+      <Reveal><WhyAccelioSection /></Reveal>
       <Reveal><PricingPreviewSection /></Reveal>
       <Reveal><FaqSection /></Reveal>
       <Reveal><FinalCtaSection /></Reveal>

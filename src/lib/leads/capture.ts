@@ -1,6 +1,6 @@
 /**
  * Public website lead capture — the ONE place a lead can be created without
- * an authenticated Reelo session. Uses the service-role admin client (see
+ * an authenticated Accelio session. Uses the service-role admin client (see
  * `@/lib/supabase/admin`'s own comment on why: a website visitor has no
  * session for RLS to key off, the same situation Phase 9's WhatsApp webhook
  * is in). Because this bypasses RLS entirely, every trust decision normally

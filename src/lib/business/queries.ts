@@ -18,7 +18,7 @@ export interface CurrentMembership {
  * automatically becomes staff-aware with zero changes to those files.
  *
  * A user could in principle belong to more than one business (e.g. staff at
- * one, owner of another). Reelo has no business-switcher UI yet, so this
+ * one, owner of another). Accelio has no business-switcher UI yet, so this
  * deterministically picks their oldest active membership — in practice
  * every real user has exactly one.
  */

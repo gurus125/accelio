@@ -34,7 +34,7 @@ export default async function DashboardPage() {
   if (!business) {
     return (
       <>
-        <TopBar title="Welcome to Reelo" subtitle="Finish setting up your business to see your dashboard." />
+        <TopBar title="Welcome to Accelio" subtitle="Finish setting up your business to see your dashboard." />
         <div className="flex-1 p-4 sm:p-8">
           <div className="rounded-2xl border border-dashed border-border p-8 text-center">
             <p className="font-medium">Your business profile isn&apos;t set up yet.</p>
@@ -198,7 +198,7 @@ function MockDashboard() {
             {counts.total} customers are worth contacting today
           </p>
           <p className="mt-1.5 text-sm text-brand-700/80">
-            Reelo scanned your customer list and found people who are overdue, going quiet, or worth a timely offer.
+            Accelio scanned your customer list and found people who are overdue, going quiet, or worth a timely offer.
           </p>
         </div>
 

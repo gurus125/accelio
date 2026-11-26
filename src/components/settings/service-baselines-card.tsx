@@ -90,9 +90,9 @@ export function ServiceBaselinesCard({ baselines, suggestedServices }: ServiceBa
     <div className="space-y-4">
       <InlineError message={error} />
       <p className="text-sm text-muted-foreground">
-        Tell Reelo how often customers should return for each service. New customers can get a relevant
-        recommendation from their first visit — before Reelo has learned their own pattern — using whichever of
-        these you set. Leave a service unconfigured and Reelo falls back to a reasonable general default where one
+        Tell Accelio how often customers should return for each service. New customers can get a relevant
+        recommendation from their first visit — before Accelio has learned their own pattern — using whichever of
+        these you set. Leave a service unconfigured and Accelio falls back to a reasonable general default where one
         exists, or stays quiet rather than guessing.
       </p>
 

@@ -4,13 +4,13 @@ import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { InlineError } from "@/components/inline-error";
 import { hasRequiredMapping } from "@/lib/import/mapping";
-import { REELO_FIELDS } from "@/types/import";
-import type { ColumnMapping, ReeloField } from "@/types/import";
+import { ACCELIO_FIELDS } from "@/types/import";
+import type { ColumnMapping, AccelioField } from "@/types/import";
 
 interface ColumnMapperStepProps {
   headers: string[];
   mapping: ColumnMapping;
-  onChange: (header: string, field: ReeloField | null) => void;
+  onChange: (header: string, field: AccelioField | null) => void;
   onBack: () => void;
   onContinue: () => void;
 }
@@ -20,7 +20,7 @@ export function ColumnMapperStep({ headers, mapping, onChange, onBack, onContinu
 
   // A field already mapped to another column can't also be picked here —
   // keeps the mapping one-to-one without needing extra validation copy.
-  const usedFields = new Set(Object.values(mapping).filter((v): v is ReeloField => v !== null));
+  const usedFields = new Set(Object.values(mapping).filter((v): v is AccelioField => v !== null));
 
   return (
     <div className="space-y-6">
@@ -39,7 +39,7 @@ export function ColumnMapperStep({ headers, mapping, onChange, onBack, onContinu
             <tr className="border-b border-border bg-muted/50 text-left text-xs uppercase tracking-wide text-muted-foreground">
               <th className="px-4 py-3 font-medium">Your column</th>
               <th className="px-4 py-3 font-medium" />
-              <th className="px-4 py-3 font-medium">Reelo field</th>
+              <th className="px-4 py-3 font-medium">Accelio field</th>
             </tr>
           </thead>
           <tbody>
@@ -54,11 +54,11 @@ export function ColumnMapperStep({ headers, mapping, onChange, onBack, onContinu
                   <td className="px-4 py-3">
                     <select
                       value={current ?? ""}
-                      onChange={(e) => onChange(header, (e.target.value || null) as ReeloField | null)}
+                      onChange={(e) => onChange(header, (e.target.value || null) as AccelioField | null)}
                       className="flex h-9 w-full max-w-[220px] rounded-lg border border-border bg-white px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
                     >
                       <option value="">Don&apos;t import</option>
-                      {REELO_FIELDS.map((field) => (
+                      {ACCELIO_FIELDS.map((field) => (
                         <option
                           key={field.id}
                           value={field.id}

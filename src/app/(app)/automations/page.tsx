@@ -57,7 +57,7 @@ export default async function AutomationsPage() {
     <>
       <TopBar
         title="Automations"
-        subtitle="Simple, transparent WhatsApp follow-ups you turn on — Reelo never messages anyone without a rule you set up and approved."
+        subtitle="Simple, transparent WhatsApp follow-ups you turn on — Accelio never messages anyone without a rule you set up and approved."
         action={
           <Link href="/automations/new" className={buttonVariants({ size: "sm" })}>
             <Plus className="h-4 w-4" />

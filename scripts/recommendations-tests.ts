@@ -440,7 +440,7 @@ function inboundEntry(timestamp: Date): TimelineEntry {
 
 // 19. Brand-new customer, first visit, NO configured baseline and no
 // recognizable built-in default (unrecognized service, excluded business
-// type) -> Reelo must NOT manufacture an opportunity.
+// type) -> Accelio must NOT manufacture an opportunity.
 {
   const customer = makeCustomer({ id: "cust-boutique-1" });
   const events = [visitEvent("cust-boutique-1", daysAgo(60), 500, "Bespoke Tailoring Consultation")];

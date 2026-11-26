@@ -195,7 +195,7 @@ export async function setCampaignMessage(
   const template = input.messageTemplate.trim();
   if (!template) return { error: "A message is required." };
   if (!hasOnlySupportedVariables(template)) {
-    return { error: "This message uses a variable Reelo doesn't recognize. Only {{customer_name}} and {{business_name}} are supported." };
+    return { error: "This message uses a variable Accelio doesn't recognize. Only {{customer_name}} and {{business_name}} are supported." };
   }
 
   const recipients = await listRecipients(campaignId);

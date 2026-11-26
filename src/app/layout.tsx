@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Reelo — Bring your customers back",
+  title: "Accelio — Bring your customers back",
   description:
-    "Reelo finds the customers worth contacting, helps you write the right message, and makes it easy to reach them.",
+    "Accelio finds the customers worth contacting, helps you write the right message, and makes it easy to reach them.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

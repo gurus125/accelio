@@ -1,4 +1,4 @@
-# Reelo
+# Accelio
 
 A customer marketing assistant for local businesses. This repo currently
 contains **Phase 1** (a frontend prototype on mock data), **Phase 2** (a
@@ -405,9 +405,9 @@ nothing persisted to the database.
 
 On the opportunity detail page (`/opportunities/[customerId]`), reached from
 the dashboard, `/opportunities`, or a customer's profile, the owner can now
-have Reelo draft the actual message — on request only, never automatically.
+have Accelio draft the actual message — on request only, never automatically.
 
-- Reelo (Phase 6) still decides **who** to contact and **why**; the AI
+- Accelio (Phase 6) still decides **who** to contact and **why**; the AI
   (OpenAI, `gpt-4o-mini`) only decides **how** to phrase it. The AI never
   determines whether a customer is overdue — it's handed the engine's own
   reason text and asked to phrase a message around it.
@@ -476,9 +476,9 @@ the official Meta WhatsApp Cloud API — never automatically.
 
 ## WhatsApp message tracking + replies (Phase 9)
 
-Once a message is sent, Reelo now tracks what actually happens to it —
+Once a message is sent, Accelio now tracks what actually happens to it —
 delivered, read, failed — and records when the customer replies, all from
-real Meta webhook events. This does NOT turn Reelo into a WhatsApp chatbot:
+real Meta webhook events. This does NOT turn Accelio into a WhatsApp chatbot:
 there are no automatic replies, no automated follow-ups, and no bulk
 sending. The owner approves every outbound message (Phase 8) and continues
 any conversation manually on WhatsApp itself.
@@ -511,7 +511,7 @@ any conversation manually on WhatsApp itself.
   (`getCommunicationTimelineForCustomer` in `src/lib/whatsapp/queries.ts`).
 - **Unknown senders**: an inbound message from a number that doesn't match
   any customer is stored with `customer_id = null` and surfaced on the
-  Activity page under "Unknown WhatsApp senders" — Reelo never guesses or
+  Activity page under "Unknown WhatsApp senders" — Accelio never guesses or
   silently creates a customer from WhatsApp traffic. The owner can
   explicitly click "Add as customer" (`src/lib/whatsapp/actions.ts`'s
   `addCustomerFromUnknownSender`) to create the customer and attach that
@@ -519,7 +519,7 @@ any conversation manually on WhatsApp itself.
 - **Customer profile**: "Communication history" now shows the full merged
   conversation — outbound messages with Sent/Delivered/Read/Failed status,
   and inbound replies — plus a "Customer replied" badge and a "Reply on
-  WhatsApp" link (a `wa.me/<number>` deep link; Reelo never sends anything
+  WhatsApp" link (a `wa.me/<number>` deep link; Accelio never sends anything
   automatically through it, it just opens WhatsApp for the owner to
   continue the conversation by hand).
 - **Activity page**: now real data instead of mock — lightweight counters
@@ -556,7 +556,7 @@ any conversation manually on WhatsApp itself.
 
 ## Analytics, campaign performance & customer reactivation (Phase 11)
 
-`/analytics` answers one question: **is Reelo actually helping bring
+`/analytics` answers one question: **is Accelio actually helping bring
 customers back?** Every number on it — and the lightweight summary on the
 main dashboard — comes from existing `messages`, `customer_messages`,
 `customer_events`, `campaigns`, and `campaign_recipients` rows (Phases
@@ -602,7 +602,7 @@ This is the central, and most carefully specified, metric. Defined in
 - **Revenue rule**: only the customer's **first** qualifying return visit
   counts toward "Revenue from customers who returned after outreach" — a
   second, third, etc. visit afterwards is real repeat business, but
-  attributing all of it to the original message would overstate Reelo's
+  attributing all of it to the original message would overstate Accelio's
   effect, so the metric stays conservative on purpose.
 - The 30-day boundary is inclusive (exactly 30.0 days still counts; 30
   days + 1ms does not) and computed on real UTC timestamps, never
@@ -611,8 +611,8 @@ This is the central, and most carefully specified, metric. Defined in
 
 **This is an observational metric, not proof of causation.** The UI, this
 README, and the code comments only ever say "returned after outreach" /
-"customers who returned after outreach" — never "Reelo generated this
-customer," "Reelo caused this sale," or any invented ROI/percentage
+"customers who returned after outreach" — never "Accelio generated this
+customer," "Accelio caused this sale," or any invented ROI/percentage
 uplift. If visit amounts (`customer_events.amount`) were never recorded
 for a business, the revenue tile shows **"Revenue tracking unavailable"**
 — never a fabricated ₹0, which would incorrectly imply zero revenue

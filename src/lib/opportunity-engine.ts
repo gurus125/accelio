@@ -2,7 +2,7 @@ import { CUSTOMERS } from "./mock-data";
 import type { Customer, Opportunity, OpportunityReason } from "@/types";
 
 /**
- * This is the "brain" of Reelo for Phase 1: a small set of readable rules
+ * This is the "brain" of Accelio for Phase 1: a small set of readable rules
  * that turn raw customer records into plain-English reasons to reach out.
  * In later phases this logic moves server-side and gets smarter, but the
  * shape — customer in, { reason, explanation, message } out — stays the same.

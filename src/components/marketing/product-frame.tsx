@@ -2,7 +2,7 @@ import { Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /**
- * The one "this is a real screen from the Reelo app" wrapper, reused by
+ * The one "this is a real screen from the Accelio app" wrapper, reused by
  * every product showcase on the homepage (hero, recommendations, WhatsApp
  * outreach, analytics) so they read as one consistent product, not four
  * differently-styled mockups. A slim title bar (dot chrome + a label,

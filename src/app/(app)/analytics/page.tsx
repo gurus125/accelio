@@ -69,7 +69,7 @@ export default async function AnalyticsPage({ searchParams }: AnalyticsPageProps
     <>
       <TopBar
         title="Analytics"
-        subtitle="Is Reelo actually helping you bring customers back? Every number below comes from your real WhatsApp and visit records."
+        subtitle="Is Accelio actually helping you bring customers back? Every number below comes from your real WhatsApp and visit records."
       />
 
       <div className="flex-1 space-y-8 p-4 sm:p-8">
@@ -136,7 +136,7 @@ export default async function AnalyticsPage({ searchParams }: AnalyticsPageProps
           <h2 className="mb-1 text-lg font-semibold tracking-tight">Customer reactivation</h2>
           <p className="mb-4 text-sm text-muted-foreground">
             A customer counts as &ldquo;returned after outreach&rdquo; when they recorded a visit within{" "}
-            {REACTIVATION_ATTRIBUTION_DAYS} days of a WhatsApp message from Reelo. This is observational — it does not
+            {REACTIVATION_ATTRIBUTION_DAYS} days of a WhatsApp message from Accelio. This is observational — it does not
             claim the message caused the visit.
           </p>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

@@ -18,7 +18,7 @@ export const RETURN_OVERDUE_MULTIPLIER = 1.25;
  * business/service baseline ("strong" personal history). Below it (1-2
  * visits), the interval is "weak" — a real signal, but one that still
  * leans on a baseline where one exists, per the tiered-intelligence model:
- * Reelo should be useful from a customer's first visit, not just their
+ * Accelio should be useful from a customer's first visit, not just their
  * third. This deliberately does NOT gate whether an opportunity can fire at
  * all anymore (see `service-defaults.ts` / `rules.ts`) — only how much
  * weight the customer's own history carries versus the baseline.

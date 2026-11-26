@@ -51,7 +51,7 @@ export default function ForgotPasswordPage() {
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-500 text-white">
             <Sparkles className="h-4 w-4" />
           </div>
-          <span className="text-lg font-semibold tracking-tight">Reelo</span>
+          <span className="text-lg font-semibold tracking-tight">Accelio</span>
         </Link>
 
         {sent ? (

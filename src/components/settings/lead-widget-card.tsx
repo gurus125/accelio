@@ -18,7 +18,7 @@ const SOURCE_OPTIONS: { value: LeadWidgetRow["default_source"]; label: string }[
 ];
 
 function buildSnippet(widgetKey: string, origin: string): string {
-  return `<script src="${origin}/reelo-widget.js" data-widget="${widgetKey}" async></script>`;
+  return `<script src="${origin}/accelio-widget.js" data-widget="${widgetKey}" async></script>`;
 }
 
 /**

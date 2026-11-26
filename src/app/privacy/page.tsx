@@ -1,7 +1,7 @@
 import { SiteNavbar } from "@/components/marketing/site-navbar";
 import { SiteFooter } from "@/components/marketing/site-footer";
 
-export const metadata = { title: "Privacy Policy — Reelo" };
+export const metadata = { title: "Privacy Policy — Accelio" };
 
 /** PLACEHOLDER — a real privacy policy needs legal review before
  * publishing; wire this up from the admin panel/CMS once that's ready

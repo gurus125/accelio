@@ -82,7 +82,7 @@ export default async function InviteAcceptPage({ params }: { params: { token: st
   if (!user) {
     return (
       <CenteredShell>
-        <h1 className="text-xl font-semibold">Join {businessName} on Reelo</h1>
+        <h1 className="text-xl font-semibold">Join {businessName} on Accelio</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           {invitation.name ? `${invitation.name}, y` : "Y"}ou&apos;ve been invited as staff. Sign in or create an
           account with <span className="font-medium text-foreground">{invitation.email}</span> to accept.
@@ -119,7 +119,7 @@ export default async function InviteAcceptPage({ params }: { params: { token: st
 
   return (
     <CenteredShell>
-      <h1 className="text-xl font-semibold">Join {businessName} on Reelo</h1>
+      <h1 className="text-xl font-semibold">Join {businessName} on Accelio</h1>
       <p className="mt-2 text-sm text-muted-foreground">
         You&apos;ve been invited as staff. Accept below to get access.
       </p>
@@ -136,7 +136,7 @@ function CenteredShell({ children }: { children: React.ReactNode }) {
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-500 text-white">
             <Sparkles className="h-4 w-4" />
           </div>
-          <span className="text-lg font-semibold tracking-tight">Reelo</span>
+          <span className="text-lg font-semibold tracking-tight">Accelio</span>
         </Link>
         <div className="rounded-2xl border border-border bg-white p-7 shadow-card">{children}</div>
       </div>

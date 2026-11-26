@@ -30,7 +30,7 @@ export function LeadCaptureSection() {
             </div>
           </div>
 
-          {/* What lands in Reelo */}
+          {/* What lands in Accelio */}
           <ProductFrame label="Leads">
             <Badge variant="success" className="mb-3">
               New lead

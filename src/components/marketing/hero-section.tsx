@@ -37,7 +37,7 @@ export function HeroSection() {
             </span>
           </h1>
           <p className="mt-5 max-w-lg text-lg text-muted-foreground">
-            Reelo finds the customers worth contacting, tells you why, helps you write the right message, and makes
+            Accelio finds the customers worth contacting, tells you why, helps you write the right message, and makes
             it easy to reach them.
           </p>
           <div className="mt-8 flex flex-wrap items-center gap-3">

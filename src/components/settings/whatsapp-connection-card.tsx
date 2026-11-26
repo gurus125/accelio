@@ -92,13 +92,13 @@ export function WhatsAppConnectionCard({
       {/* Phase 20 — plain-language trust explanation leads, before the
           unavoidable technical fields below. Meta's WhatsApp Cloud API
           genuinely requires a Phone Number ID and access token from their
-          own developer console — Reelo can't remove that step without a
+          own developer console — Accelio can't remove that step without a
           full Embedded Signup integration, which is out of scope here — so
           the fix is making clear WHY this is needed and that the business
           stays in control, not hiding the fields themselves. */}
       <ul className="space-y-1.5 text-sm text-muted-foreground">
-        <li>• Connecting WhatsApp lets Reelo send the messages you approve — reminders, follow-ups, replies.</li>
-        <li>• Reelo never sends anything on its own. You review and approve every message first.</li>
+        <li>• Connecting WhatsApp lets Accelio send the messages you approve — reminders, follow-ups, replies.</li>
+        <li>• Accelio never sends anything on its own. You review and approve every message first.</li>
         <li>• You can disconnect at any time from this page.</li>
       </ul>
 

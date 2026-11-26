@@ -21,7 +21,7 @@ export function PricingPreviewSection() {
       <div className="container py-16 sm:py-20">
         <SectionHeading
           heading="Start free. Upgrade when you're ready."
-          subheading="Reelo's Free plan is free forever. Upgrade when your business needs more capacity."
+          subheading="Accelio's Free plan is free forever. Upgrade when your business needs more capacity."
         />
 
         <Reveal className="mx-auto mt-12 grid max-w-5xl gap-6 lg:grid-cols-3">

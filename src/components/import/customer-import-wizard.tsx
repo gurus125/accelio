@@ -21,7 +21,7 @@ import { suggestMapping } from "@/lib/import/mapping";
 import { buildImportRows, computeSummary, isDuplicateRow, willImportRow } from "@/lib/import/validate";
 import { markDuplicatesAgainstExisting, markDuplicatesInFile } from "@/lib/import/duplicates";
 import { getExistingPhonesForImport, importCustomerBatch, type ImportRowInput } from "@/lib/import/actions";
-import type { ColumnMapping, ImportFailure, NormalizedImportRow, ReeloField } from "@/types/import";
+import type { ColumnMapping, ImportFailure, NormalizedImportRow, AccelioField } from "@/types/import";
 
 const BATCH_SIZE = 200;
 
@@ -93,7 +93,7 @@ export function CustomerImportWizard() {
     }
   };
 
-  const handleMappingChange = (header: string, field: ReeloField | null) => {
+  const handleMappingChange = (header: string, field: AccelioField | null) => {
     setMapping((prev) => ({ ...prev, [header]: field }));
   };
 

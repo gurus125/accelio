@@ -7,7 +7,7 @@ import { env, isSupabaseConfigured } from "@/lib/config";
  * Use this ONLY from trusted server-to-server code that has no user session
  * to scope queries by. Currently that's exactly one place: the Meta
  * WhatsApp webhook handler (`/api/webhooks/whatsapp`), which receives
- * calls from Meta's servers, not from a signed-in Reelo user, so there's no
+ * calls from Meta's servers, not from a signed-in Accelio user, so there's no
  * `auth.uid()` for RLS to key off.
  *
  * Never import this from anything handling a browser request on a user's

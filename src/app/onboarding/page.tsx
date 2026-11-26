@@ -98,7 +98,7 @@ export default function OnboardingPage() {
         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-500 text-white">
           <Sparkles className="h-4 w-4" />
         </div>
-        <span className="text-lg font-semibold tracking-tight">Reelo</span>
+        <span className="text-lg font-semibold tracking-tight">Accelio</span>
       </header>
 
       <div className="mx-auto w-full max-w-xl flex-1 px-4 py-10 sm:py-16">
@@ -118,7 +118,7 @@ export default function OnboardingPage() {
         {step === 1 && (
           <div className="animate-fade-in-up">
             <h1 className="text-2xl font-semibold tracking-tight">What type of business do you run?</h1>
-            <p className="mt-1.5 text-sm text-muted-foreground">This helps Reelo tailor its suggestions.</p>
+            <p className="mt-1.5 text-sm text-muted-foreground">This helps Accelio tailor its suggestions.</p>
             <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3">
               {BUSINESS_TYPES.map((type) => (
                 <button
@@ -178,7 +178,7 @@ export default function OnboardingPage() {
           <div className="animate-fade-in-up">
             <h1 className="text-2xl font-semibold tracking-tight">Import your customers</h1>
             <p className="mt-1.5 text-sm text-muted-foreground">
-              Bring in your existing customer list so Reelo can start finding opportunities. You can always do this
+              Bring in your existing customer list so Accelio can start finding opportunities. You can always do this
               later from Customers.
             </p>
 
@@ -214,7 +214,7 @@ export default function OnboardingPage() {
             </div>
             <h1 className="mt-6 text-2xl font-semibold tracking-tight">You&apos;re ready.</h1>
             <p className="mt-2 max-w-sm text-muted-foreground">
-              Add your customers whenever you&apos;re ready, and Reelo will start finding who needs your attention.
+              Add your customers whenever you&apos;re ready, and Accelio will start finding who needs your attention.
             </p>
             <Button size="lg" className="mt-8" onClick={finish} disabled={finishing}>
               {finishing ? "Setting up..." : "Go to dashboard"}

@@ -1,5 +1,5 @@
 /**
- * Authenticated, RLS-scoped lead queries — for the Reelo dashboard only.
+ * Authenticated, RLS-scoped lead queries — for the Accelio dashboard only.
  * The public capture path never uses these (see `capture.ts`, which uses
  * the service-role admin client instead, the same split Phase 9's webhook
  * already established).

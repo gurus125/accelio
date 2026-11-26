@@ -17,7 +17,7 @@ export function FinalCtaSection() {
         <h2 className="max-w-2xl text-3xl font-semibold tracking-tight sm:text-4xl">
           Your next repeat customer might already be in your database.
         </h2>
-        <p className="text-brand-50">Let Reelo find them.</p>
+        <p className="text-brand-50">Let Accelio find them.</p>
         <Link
           href="/signup"
           className={buttonVariants({
