@@ -6,6 +6,7 @@ import { TrendBarChart } from "@/components/analytics/trend-bar-chart";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, Send, CheckCheck, Eye, MessageSquare, RotateCcw, Globe, UserPlus, CheckCircle2 } from "lucide-react";
 import { requireBusinessForCurrentUser } from "@/lib/business/queries";
+import { isSupabaseConfigured } from "@/lib/config";
 import { resolveAnalyticsDateRange } from "@/lib/analytics/date-range";
 import { getBusinessTimeZone } from "@/lib/dates";
 import { getAnalyticsOverview } from "@/lib/analytics/overview";
@@ -45,6 +46,25 @@ interface AnalyticsPageProps {
 }
 
 export default async function AnalyticsPage({ searchParams }: AnalyticsPageProps) {
+  // Without Supabase configured there's no data to analyse — show a calm
+  // notice instead of crashing (this also lets `next build` prerender the
+  // page in an environment with no Supabase env vars).
+  if (!isSupabaseConfigured) {
+    return (
+      <>
+        <TopBar title="Analytics" />
+        <div className="flex-1 p-4 sm:p-8">
+          <div className="rounded-2xl border border-dashed border-border bg-muted/30 p-8 text-center">
+            <p className="font-medium">Analytics needs your Supabase project connected.</p>
+            <p className="mt-1.5 text-sm text-muted-foreground">
+              Add your Supabase settings (see .env.example), then your real numbers will show here.
+            </p>
+          </div>
+        </div>
+      </>
+    );
+  }
+
   const business = await requireBusinessForCurrentUser();
   const range = resolveAnalyticsDateRange(searchParams, getBusinessTimeZone(business));
 
