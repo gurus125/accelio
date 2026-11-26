@@ -1,0 +1,38 @@
+-- Phase 19 hardening follow-up: close an authorization bypass that the
+-- previous migration (0011) unintentionally introduced.
+--
+-- `reserve_ai_generation` and `reserve_whatsapp_message` were created with
+-- `revoke all ... from public; grant execute ... to authenticated,
+-- service_role;` — but Postgres/Supabase's default privileges on newly
+-- created functions in the `public` schema ALSO grant EXECUTE directly to
+-- the `anon` role at creation time, and revoking from the PUBLIC
+-- pseudo-role does not touch that separate, already-granted `anon`
+-- privilege. The result: `anon` retained EXECUTE on both functions.
+--
+-- Both functions treat a null `auth.uid()` as "trusted internal caller"
+-- and skip the `is_business_member()` authorization check in that case —
+-- correct for service_role (which has no user JWT, so auth.uid() is
+-- always null), but `auth.uid()` is ALSO null for an unauthenticated
+-- anon-key REST call. Since Supabase's anon key is public (it ships in
+-- every client bundle) and PostgREST exposes every function with EXECUTE
+-- granted as a callable RPC endpoint, anyone holding the project's anon
+-- key could have called either RPC directly — with an arbitrary
+-- business_id, customer_id/lead_id, and content — completely bypassing
+-- both the app's own authorization layer and this function's own
+-- membership check, and inserting/counting usage against any business.
+--
+-- This was caught during Phase 19's own security audit (Section 7:
+-- authorization must happen server-side; client-supplied business_id must
+-- never be trusted) before being exploited, and is not present in any
+-- pre-Phase-19 function — is_business_member/is_business_owner rely only
+-- on `bm.user_id = auth.uid()`, which safely evaluates to false (never a
+-- match) for a null auth.uid(), so they never needed this fix.
+--
+-- Fix: revoke anon's EXECUTE. Unauthenticated calls now fail at the grant
+-- level (permission denied) before the function body ever runs.
+-- `authenticated` callers are unaffected — a valid JWT always carries a
+-- real auth.uid(), so is_business_member() continues to gate them exactly
+-- as before. `service_role` is unaffected — it was never restricted by
+-- the anon grant in the first place.
+revoke execute on function public.reserve_ai_generation(uuid, timestamptz, integer) from anon;
+revoke execute on function public.reserve_whatsapp_message(uuid, uuid, uuid, text, text, text, text, timestamptz, integer, integer) from anon;

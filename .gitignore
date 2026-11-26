@@ -1,0 +1,15 @@
+node_modules
+.next
+out
+.env*.local
+.env
+!.env.example
+.DS_Store
+*.log
+.analytics-test-build
+.automations-test-build
+.recommendations-test-build
+.leads-test-build
+_to_delete
+
+tsconfig.tsbuildinfo

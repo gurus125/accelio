@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+    "target": "ES2019",
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "outDir": ".recommendations-test-build",
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    },
+    "strict": true,
+    "lib": ["ES2019", "dom"]
+  },
+  "include": ["scripts/recommendations-tests.ts", "src/**/*.ts"],
+  "exclude": ["node_modules", "src/app/**/*.tsx", "src/components/**/*.tsx"]
+}

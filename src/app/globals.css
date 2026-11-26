@@ -1,0 +1,155 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: 0 0% 100%;
+  --foreground: 222 27% 12%;
+  --muted: 220 20% 96%;
+  --muted-foreground: 220 9% 46%;
+  --card: 0 0% 100%;
+  --card-foreground: 222 27% 12%;
+  --border: 220 16% 90%;
+  --accent: 220 20% 96%;
+  --accent-foreground: 222 27% 12%;
+}
+
+* {
+  border-color: hsl(var(--border));
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+}
+
+::selection {
+  background-color: #dbe6ff;
+}
+
+/*
+ * Baseline keyboard-focus visibility for every interactive element.
+ * Components that already define their own focus-visible ring (Button,
+ * Input, Textarea) simply override this; plain <button>/<a> elements used
+ * for filter chips, onboarding cards, etc. get a consistent ring for free.
+ */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+[role="button"]:focus-visible {
+  outline: 2px solid #3b6ef6;
+  outline-offset: 2px;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background-color: hsl(var(--border));
+  border-radius: 999px;
+}
+
+/*
+ * UI animation/interactivity pass — reusable primitives kept in plain CSS
+ * (no new dependency) so every component composes the same handful of
+ * effects instead of inventing its own transition values. Subtle & premium
+ * by design: short durations, small offsets, no bounce or color animation.
+ */
+
+/* Skeleton loading shimmer — replaces flat animate-pulse blocks with a
+ * moving highlight so loading states read as "in progress" rather than
+ * frozen. */
+@keyframes shimmer {
+  0% { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+.skeleton {
+  background-color: hsl(var(--muted));
+  background-image: linear-gradient(
+    90deg,
+    hsl(var(--muted)) 25%,
+    rgb(255 255 255 / 0.65) 37%,
+    hsl(var(--muted)) 63%
+  );
+  background-size: 400px 100%;
+  animation: shimmer 1.6s ease-in-out infinite;
+}
+
+/* Shared hover-lift used on cards/tiles that should read as clickable
+ * without a full redesign of the Card component's default (static) look. */
+.hover-lift {
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease;
+}
+.hover-lift:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 28px -12px rgb(15 23 42 / 0.16);
+}
+
+/*
+ * Respect the user's OS-level motion preference: everything above (and any
+ * Tailwind `animate-*` utility) collapses to effectively instant so nothing
+ * moves for people who've asked their system to reduce motion.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/*
+ * Marketing-homepage-only visual language (the app's own dashboard/UI
+ * deliberately keeps the plainer, calmer look per the Phase 20 UX audit —
+ * these are scoped to the public site so the two never bleed together).
+ */
+
+/* Soft dot-grid backdrop for the hero — very low opacity, purely texture. */
+.bg-dot-grid {
+  background-image: radial-gradient(hsl(var(--foreground) / 0.08) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+/* Button "shine" sweep — a light diagonal highlight that runs across a
+ * primary marketing CTA once on hover. Opt-in via a class so it never
+ * touches the shared Button component used across the actual app. */
+.btn-shine {
+  position: relative;
+  overflow: hidden;
+}
+.btn-shine::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    100deg,
+    transparent 30%,
+    rgb(255 255 255 / 0.35) 50%,
+    transparent 70%
+  );
+  transform: translateX(-150%) skewX(-20deg);
+  pointer-events: none;
+}
+.btn-shine:hover::after {
+  animation: shine 1.1s ease-in-out;
+}
+
+/* Soft ambient glow used behind the hero's product mockup and the final
+ * CTA band — a blurred, slow-drifting blob of color, never sharp-edged. */
+.glow-blob {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(60px);
+  opacity: 0.35;
+  pointer-events: none;
+  animation: blob 9s ease-in-out infinite;
+}
