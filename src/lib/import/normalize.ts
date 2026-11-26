@@ -115,9 +115,12 @@ export function normalizeDate(raw: string | undefined): DateResult {
   // Fall back to whatever the spreadsheet cell formatted the date as
   // (e.g. Excel's own locale rendering) — only trust it when JS parses it
   // unambiguously and it round-trips.
+  // `new Date("Jun 1, 2026")` is LOCAL midnight; read it back with local
+  // getters (toISOString would turn it into May 31 anywhere east of UTC,
+  // e.g. India).
   const parsed = new Date(trimmed);
   if (!Number.isNaN(parsed.getTime())) {
-    return { value: parsed.toISOString().slice(0, 10), status: "ok", raw: trimmed };
+    return finalizeDate(parsed.getFullYear(), parsed.getMonth() + 1, parsed.getDate(), trimmed);
   }
 
   return { value: null, status: "invalid", raw: trimmed };

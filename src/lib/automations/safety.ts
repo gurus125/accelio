@@ -9,20 +9,18 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { AUTOMATION_OPPORTUNITY_TYPE_PREFIX } from "./constants";
+import { DEFAULT_BUSINESS_TIMEZONE, startOfBusinessDay } from "@/lib/dates";
 
-function startOfTodayIso(now: Date): string {
-  const start = new Date(now);
-  start.setHours(0, 0, 0, 0);
-  return start.toISOString();
-}
-
-/** How many automated messages this business has already sent today
- * (business-local midnight, server clock — see the timezone note in
- * constants.ts). Counts every automation type together, per spec step 16. */
+/** How many automated messages this business has already sent today —
+ * "today" starting at midnight in the BUSINESS's time zone (Milestone 1;
+ * this used the server clock's midnight before, which on a UTC server
+ * reset the daily cap at 5:30am IST). Counts every automation type
+ * together, per spec step 16. */
 export async function countAutomatedMessagesSentTodayForBusiness(
   businessId: string,
   supabase: SupabaseClient,
-  now: Date = new Date()
+  now: Date = new Date(),
+  timeZone: string = DEFAULT_BUSINESS_TIMEZONE
 ): Promise<number> {
   const { count, error } = await supabase
     .from("messages")
@@ -30,7 +28,7 @@ export async function countAutomatedMessagesSentTodayForBusiness(
     .eq("business_id", businessId)
     .like("opportunity_type", `${AUTOMATION_OPPORTUNITY_TYPE_PREFIX}%`)
     .not("sent_at", "is", null)
-    .gte("sent_at", startOfTodayIso(now));
+    .gte("sent_at", startOfBusinessDay(now, timeZone).toISOString());
 
   if (error) throw new Error(error.message);
   return count ?? 0;

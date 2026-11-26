@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, Send, CheckCheck, Eye, MessageSquare, RotateCcw, Globe, UserPlus, CheckCircle2 } from "lucide-react";
 import { requireBusinessForCurrentUser } from "@/lib/business/queries";
 import { resolveAnalyticsDateRange } from "@/lib/analytics/date-range";
+import { getBusinessTimeZone } from "@/lib/dates";
 import { getAnalyticsOverview } from "@/lib/analytics/overview";
 import { getAnalyticsTrends } from "@/lib/analytics/trends";
 import { getOpportunityTypeAnalytics } from "@/lib/analytics/opportunities";
@@ -45,7 +46,7 @@ interface AnalyticsPageProps {
 
 export default async function AnalyticsPage({ searchParams }: AnalyticsPageProps) {
   const business = await requireBusinessForCurrentUser();
-  const range = resolveAnalyticsDateRange(searchParams);
+  const range = resolveAnalyticsDateRange(searchParams, getBusinessTimeZone(business));
 
   const [overview, trends, opportunityStats, recentlyReturned, campaigns, leadSummary, leadSources, automationAnalytics] = await Promise.all([
     getAnalyticsOverview(business.id, range),

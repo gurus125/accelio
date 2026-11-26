@@ -18,6 +18,7 @@ import { listLeadsForBusiness } from "@/lib/leads/queries";
 import { findDueRecurringSchedules, periodKeyForRecurringSchedule } from "@/lib/recurring-schedules/queries";
 import type { BusinessRow, CustomerRow } from "@/types/database";
 import type { CustomerConsentFields } from "@/lib/consent";
+import { DEFAULT_BUSINESS_TIMEZONE, getBusinessTimeZone } from "@/lib/dates";
 import type { AutomationCandidate, AutomationType } from "./types";
 
 function pickConsent(customer: CustomerRow | undefined): CustomerConsentFields | undefined {
@@ -116,12 +117,13 @@ export async function findOpportunityBasedCandidates(
 export async function findRecurringScheduleCandidates(
   businessId: string,
   supabase: SupabaseClient,
-  now: Date = new Date()
+  now: Date = new Date(),
+  timeZone: string = DEFAULT_BUSINESS_TIMEZONE
 ): Promise<AutomationCandidate[]> {
-  const due = await findDueRecurringSchedules(businessId, supabase, now);
+  const due = await findDueRecurringSchedules(businessId, supabase, now, timeZone);
 
   return due.map(({ schedule, customer }) => ({
-    entityEventKey: `recurring:${schedule.id}:${periodKeyForRecurringSchedule(schedule, now)}`,
+    entityEventKey: `recurring:${schedule.id}:${periodKeyForRecurringSchedule(schedule, now, timeZone)}`,
     customerId: schedule.customer_id,
     triggeredAt: now,
     templateContext: { customerName: customer.name, reminderLabel: schedule.label },
@@ -141,7 +143,7 @@ export async function findCandidatesForAutomation(
     return findNewLeadFollowupCandidates(business.id, supabase);
   }
   if (automationType === "recurring_schedule") {
-    return findRecurringScheduleCandidates(business.id, supabase, now);
+    return findRecurringScheduleCandidates(business.id, supabase, now, getBusinessTimeZone(business));
   }
   return findOpportunityBasedCandidates(automationType, business, supabase, now);
 }

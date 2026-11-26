@@ -10,6 +10,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { fetchAllPages } from "@/lib/supabase/paginate";
+import { DEFAULT_BUSINESS_TIMEZONE, startOfBusinessDay } from "@/lib/dates";
 import type {
   AutomationActionType,
   AutomationLanguage,
@@ -306,10 +307,11 @@ export interface AutomationDashboardSummary {
 export async function getAutomationDashboardSummary(
   businessId: string,
   supabase: SupabaseClient = createClient(),
-  now: Date = new Date()
+  now: Date = new Date(),
+  timeZone: string = DEFAULT_BUSINESS_TIMEZONE
 ): Promise<AutomationDashboardSummary> {
-  const startOfToday = new Date(now);
-  startOfToday.setHours(0, 0, 0, 0);
+  // "Today" = since local midnight in the business's zone.
+  const startOfToday = startOfBusinessDay(now, timeZone);
 
   const [activeResult, sentResult, skippedResult] = await Promise.all([
     supabase.from("automations").select("id", { count: "exact", head: true }).eq("business_id", businessId).eq("status", "active"),

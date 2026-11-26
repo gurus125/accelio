@@ -21,6 +21,7 @@ import { MAX_LEAD_FOLLOWUPS_SHOWN } from "@/lib/leads/constants";
 import { WebsiteLeadFollowUps } from "@/components/leads/website-lead-follow-ups";
 import { AutomationsSummaryCard } from "@/components/automations/automations-summary-card";
 import { getAutomationDashboardSummary } from "@/lib/automations/queries";
+import { getBusinessTimeZone } from "@/lib/dates";
 
 export default async function DashboardPage() {
   if (!isSupabaseConfigured) {
@@ -52,10 +53,10 @@ export default async function DashboardPage() {
   const [customers, events, analyticsSummary, dailyRecommendations, leads, automationsSummary, serviceBaselines] = await Promise.all([
     listCustomers(business.id),
     listEventsForBusiness(business.id),
-    getDashboardAnalyticsSummary(business.id),
+    getDashboardAnalyticsSummary(business.id, getBusinessTimeZone(business)),
     getDailyRecommendations(business),
     listLeadsForBusiness(business.id),
-    getAutomationDashboardSummary(business.id),
+    getAutomationDashboardSummary(business.id, undefined, undefined, getBusinessTimeZone(business)),
     listServiceBaselines(business.id),
   ]);
   const leadFollowUps = buildLeadFollowUps(leads).slice(0, MAX_LEAD_FOLLOWUPS_SHOWN);

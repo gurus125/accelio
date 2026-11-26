@@ -35,12 +35,9 @@ export const AUTOMATION_BUSINESS_HOURS_START_HOUR = 9;
 export const AUTOMATION_BUSINESS_HOURS_END_HOUR = 20;
 
 /**
- * No per-business timezone field exists anywhere in the schema (Phase
- * 4-13). Rather than inventing a whole timezone-configuration system for
- * this phase (explicitly out of scope per spec step 21), every business is
- * assumed to operate in India Standard Time — true for every business this
- * product currently serves, and consistent with the rest of the app's
- * Indian-mobile-only phone handling (`lib/whatsapp/phone.ts`).
+ * Milestone 1: each business now has its own `timezone` (migration 0017,
+ * read via `getBusinessTimeZone` in src/lib/dates.ts). This constant is
+ * kept as the documented default and equals `DEFAULT_BUSINESS_TIMEZONE`.
  */
 export const ASSUMED_BUSINESS_TIMEZONE = "Asia/Kolkata";
 

@@ -38,6 +38,7 @@ import { recordAutomationRun, stampAutomationLastRunAt } from "./queries";
 import { getRemainingWhatsAppMessageQuota, getWhatsAppReservationContext } from "@/lib/billing/limits";
 import { AUTOMATION_OPPORTUNITY_TYPE_PREFIX, MAX_AUTOMATION_CANDIDATES_PER_TICK } from "./constants";
 import type { AutomationCandidate, AutomationRow, AutomationRunOutcome } from "./types";
+import { getBusinessTimeZone } from "@/lib/dates";
 
 /** Reasons that describe a candidate simply not being due YET (a delay
  * still counting down, or outside business hours). These are NOT written
@@ -89,7 +90,8 @@ export async function runAutomationOnce(
   // otherwise a single tick processing many candidates could blow past
   // the daily cap before any of those sends were reflected in a fresh
   // DB count. The DB count itself remains the source of truth across ticks.
-  let sentTodayCount = await countAutomatedMessagesSentTodayForBusiness(business.id, supabase, now);
+  const timeZone = getBusinessTimeZone(business);
+  let sentTodayCount = await countAutomatedMessagesSentTodayForBusiness(business.id, supabase, now, timeZone);
   // Phase 16 — the WhatsApp send quota is shared across every send path
   // (customer, lead, campaign, automation); seeded once per tick and
   // decremented locally for the same reason `sentTodayCount` is, then
@@ -130,6 +132,7 @@ export async function runAutomationOnce(
       monthlyCountForCustomerOrLead,
       now,
       supabase,
+      timeZone,
     });
 
     if (!eligibility.eligible) {

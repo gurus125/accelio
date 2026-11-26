@@ -10,9 +10,11 @@ import { createClient } from "@/lib/supabase/server";
 import { fetchAllPages } from "@/lib/supabase/paginate";
 import type { AnalyticsDateRange } from "./date-range";
 import { getReactivationSummary } from "./reactivation-query";
+import { addDaysToDateKey, businessDateKey, parseDateKey } from "@/lib/dates";
 
 export interface TrendPoint {
-  /** UTC day (bucket=day) or UTC Monday-of-week (bucket=week), "YYYY-MM-DD". */
+  /** Local day (bucket=day) or local Monday-of-week (bucket=week) in the
+   * business time zone, "YYYY-MM-DD". */
   bucketStart: string;
   value: number;
 }
@@ -23,30 +25,23 @@ export interface AnalyticsTrends {
   returns: TrendPoint[];
 }
 
-const DAY_MS = 24 * 60 * 60 * 1000;
-const WEEK_MS = 7 * DAY_MS;
-
-function bucketKey(iso: string, bucket: "day" | "week"): string {
-  const d = new Date(iso);
-  if (bucket === "day") return d.toISOString().slice(0, 10);
-
-  // Monday-start UTC week.
-  const day = d.getUTCDay(); // 0 = Sunday
-  const diffToMonday = (day === 0 ? -6 : 1) - day;
-  const monday = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + diffToMonday));
-  return monday.toISOString().slice(0, 10);
+/** The bucket an instant falls in: its local calendar day in the business
+ * zone, or the Monday of that local week. */
+function bucketKey(iso: string, bucket: "day" | "week", timeZone: string): string {
+  const dayKey = businessDateKey(new Date(iso), timeZone);
+  if (bucket === "day") return dayKey;
+  const { year, month, day } = parseDateKey(dayKey);
+  const weekday = new Date(Date.UTC(year, month - 1, day)).getUTCDay(); // 0 = Sunday
+  return addDaysToDateKey(dayKey, weekday === 0 ? -6 : 1 - weekday);
 }
 
 function buildBuckets(range: AnalyticsDateRange): string[] {
-  const step = range.bucket === "day" ? DAY_MS : WEEK_MS;
+  const step = range.bucket === "day" ? 1 : 7;
   const buckets: string[] = [];
-  let cursorKey = bucketKey(range.startIso, range.bucket);
-  let cursorTime = new Date(cursorKey).getTime();
-  const endTime = new Date(range.endIso).getTime();
-
-  while (cursorTime < endTime) {
-    buckets.push(new Date(cursorTime).toISOString().slice(0, 10));
-    cursorTime += step;
+  // endIso is exclusive local midnight; the last included day is the one before.
+  const lastDay = businessDateKey(new Date(new Date(range.endIso).getTime() - 1), range.timeZone);
+  for (let key = bucketKey(range.startIso, range.bucket, range.timeZone); key <= lastDay; key = addDaysToDateKey(key, step)) {
+    buckets.push(key);
   }
   return buckets;
 }
@@ -87,20 +82,20 @@ export async function getAnalyticsTrends(businessId: string, range: AnalyticsDat
 
   const sentCounts = new Map<string, number>();
   for (const row of sentRows) {
-    const key = bucketKey(row.sent_at, range.bucket);
+    const key = bucketKey(row.sent_at, range.bucket, range.timeZone);
     sentCounts.set(key, (sentCounts.get(key) ?? 0) + 1);
   }
 
   const replyCounts = new Map<string, number>();
   for (const row of replyRows) {
-    const key = bucketKey(row.received_at, range.bucket);
+    const key = bucketKey(row.received_at, range.bucket, range.timeZone);
     replyCounts.set(key, (replyCounts.get(key) ?? 0) + 1);
   }
 
   const returnCounts = new Map<string, number>();
   for (const record of reactivation.records) {
     if (!record.returnAt) continue;
-    const key = bucketKey(record.returnAt, range.bucket);
+    const key = bucketKey(record.returnAt, range.bucket, range.timeZone);
     returnCounts.set(key, (returnCounts.get(key) ?? 0) + 1);
   }
 

@@ -9,13 +9,13 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { normalizePhoneForWhatsApp } from "@/lib/whatsapp/phone";
 import { checkCustomerConsent } from "@/lib/consent";
+import { DEFAULT_BUSINESS_TIMEZONE, getZonedParts } from "@/lib/dates";
 import { getActiveWhatsAppConnection, findRecentDuplicateMessage } from "@/lib/whatsapp/queries";
 import { isEligibleToday, type OutreachContext } from "@/lib/recommendations/filters";
 import type { LeadRow } from "@/types/database";
 import {
   AUTOMATION_BUSINESS_HOURS_END_HOUR,
   AUTOMATION_BUSINESS_HOURS_START_HOUR,
-  ASSUMED_BUSINESS_TIMEZONE,
   MAX_AUTOMATED_MESSAGES_PER_BUSINESS_PER_DAY,
   MAX_AUTOMATED_MESSAGES_PER_CUSTOMER_PER_30_DAYS,
 } from "./constants";
@@ -23,18 +23,13 @@ import type { AutomationCandidate, AutomationRow, EligibilityResult } from "./ty
 
 /**
  * Whether `now` falls inside the configured business-hours window, in the
- * assumed business timezone (spec step 22). Never sends outside this
+ * business's own time zone (spec step 22; Milestone 1 makes the zone a
+ * per-business setting, default Asia/Kolkata). Never sends outside this
  * window — a candidate outside it is simply deferred to a later tick, not
  * queued anywhere special (see the executor's comment on why that's safe).
  */
-export function isWithinBusinessHours(now: Date = new Date()): boolean {
-  const hourInBusinessTz = Number(
-    new Intl.DateTimeFormat("en-US", {
-      timeZone: ASSUMED_BUSINESS_TIMEZONE,
-      hour: "numeric",
-      hour12: false,
-    }).format(now)
-  );
+export function isWithinBusinessHours(now: Date = new Date(), timeZone: string = DEFAULT_BUSINESS_TIMEZONE): boolean {
+  const hourInBusinessTz = getZonedParts(now, timeZone).hour;
   return hourInBusinessTz >= AUTOMATION_BUSINESS_HOURS_START_HOUR && hourInBusinessTz < AUTOMATION_BUSINESS_HOURS_END_HOUR;
 }
 
@@ -91,6 +86,8 @@ export interface EligibilityCheckParams {
   monthlyCountForCustomerOrLead: number;
   now: Date;
   supabase: SupabaseClient;
+  /** The business's IANA zone (see `getBusinessTimeZone`). */
+  timeZone?: string;
 }
 
 /**
@@ -130,7 +127,7 @@ export async function checkCandidateEligibility(params: EligibilityCheckParams):
     return { eligible: false, reason: "delay_not_elapsed", detail: "Still waiting out the configured delay." };
   }
 
-  if (!isWithinBusinessHours(now)) {
+  if (!isWithinBusinessHours(now, params.timeZone ?? DEFAULT_BUSINESS_TIMEZONE)) {
     return {
       eligible: false,
       reason: "outside_business_hours",
