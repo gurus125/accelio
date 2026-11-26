@@ -16,6 +16,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { listCustomers } from "@/lib/customers/queries";
 import type { CustomerRow, RecurringScheduleRow } from "@/types/database";
+import { fetchAllPages } from "@/lib/supabase/paginate";
 
 export async function listRecurringSchedulesForCustomer(
   businessId: string,
@@ -162,14 +163,15 @@ export async function findDueRecurringSchedules(
   supabase: SupabaseClient,
   now: Date = new Date()
 ): Promise<{ schedule: RecurringScheduleRow; customer: CustomerRow }[]> {
-  const { data, error } = await supabase
-    .from("recurring_schedules")
-    .select("*")
-    .eq("business_id", businessId)
-    .eq("status", "active");
-  if (error) throw new Error(error.message);
-
-  const schedules = (data ?? []) as RecurringScheduleRow[];
+  const schedules = await fetchAllPages<RecurringScheduleRow>((from, to) =>
+    supabase
+      .from("recurring_schedules")
+      .select("*")
+      .eq("business_id", businessId)
+      .eq("status", "active")
+      .order("id")
+      .range(from, to)
+  );
   if (schedules.length === 0) return [];
 
   const customers = await listCustomers(businessId, supabase);

@@ -7,6 +7,7 @@
  */
 
 import { createClient } from "@/lib/supabase/server";
+import { fetchAllPages } from "@/lib/supabase/paginate";
 import type { AnalyticsDateRange } from "./date-range";
 import { getReactivationSummary } from "./reactivation-query";
 
@@ -57,36 +58,41 @@ function toTrend(buckets: string[], counts: Map<string, number>): TrendPoint[] {
 export async function getAnalyticsTrends(businessId: string, range: AnalyticsDateRange): Promise<AnalyticsTrends> {
   const supabase = createClient();
 
-  const [messagesResult, repliesResult, reactivation] = await Promise.all([
-    supabase
-      .from("messages")
-      .select("sent_at")
-      .eq("business_id", businessId)
-      .in("status", ["sent", "delivered", "read"])
-      .gte("sent_at", range.startIso)
-      .lt("sent_at", range.endIso),
-    supabase
-      .from("customer_messages")
-      .select("received_at")
-      .eq("business_id", businessId)
-      .gte("received_at", range.startIso)
-      .lt("received_at", range.endIso),
+  const [sentRows, replyRows, reactivation] = await Promise.all([
+    fetchAllPages<{ sent_at: string }>((from, to) =>
+      supabase
+        .from("messages")
+        .select("sent_at")
+        .eq("business_id", businessId)
+        .in("status", ["sent", "delivered", "read"])
+        .gte("sent_at", range.startIso)
+        .lt("sent_at", range.endIso)
+        .order("id")
+        .range(from, to)
+    ),
+    fetchAllPages<{ received_at: string }>((from, to) =>
+      supabase
+        .from("customer_messages")
+        .select("received_at")
+        .eq("business_id", businessId)
+        .gte("received_at", range.startIso)
+        .lt("received_at", range.endIso)
+        .order("id")
+        .range(from, to)
+    ),
     getReactivationSummary(businessId, range),
   ]);
-
-  if (messagesResult.error) throw new Error(messagesResult.error.message);
-  if (repliesResult.error) throw new Error(repliesResult.error.message);
 
   const buckets = buildBuckets(range);
 
   const sentCounts = new Map<string, number>();
-  for (const row of (messagesResult.data ?? []) as { sent_at: string }[]) {
+  for (const row of sentRows) {
     const key = bucketKey(row.sent_at, range.bucket);
     sentCounts.set(key, (sentCounts.get(key) ?? 0) + 1);
   }
 
   const replyCounts = new Map<string, number>();
-  for (const row of (repliesResult.data ?? []) as { received_at: string }[]) {
+  for (const row of replyRows) {
     const key = bucketKey(row.received_at, range.bucket);
     replyCounts.set(key, (replyCounts.get(key) ?? 0) + 1);
   }

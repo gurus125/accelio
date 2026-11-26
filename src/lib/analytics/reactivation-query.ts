@@ -17,6 +17,7 @@
  */
 
 import { createClient } from "@/lib/supabase/server";
+import { fetchAllPages } from "@/lib/supabase/paginate";
 import type { AnalyticsDateRange } from "./date-range";
 import { computeCustomerReactivation, isQualifyingOutreachStatus, type ReactivationResult } from "./reactivation";
 
@@ -50,24 +51,26 @@ interface VisitRow {
 export async function getReactivationSummary(businessId: string, range: AnalyticsDateRange): Promise<ReactivationSummary> {
   const supabase = createClient();
 
-  const [messagesResult, eventsResult] = await Promise.all([
-    supabase
-      .from("messages")
-      .select("customer_id, status, sent_at")
-      .eq("business_id", businessId)
-      .not("sent_at", "is", null),
-    supabase
-      .from("customer_events")
-      .select("customer_id, occurred_at, amount")
-      .eq("business_id", businessId)
-      .eq("event_type", "visit"),
+  const [messages, events] = await Promise.all([
+    fetchAllPages<MessageRow>((from, to) =>
+      supabase
+        .from("messages")
+        .select("customer_id, status, sent_at")
+        .eq("business_id", businessId)
+        .not("sent_at", "is", null)
+        .order("id")
+        .range(from, to)
+    ),
+    fetchAllPages<VisitRow>((from, to) =>
+      supabase
+        .from("customer_events")
+        .select("customer_id, occurred_at, amount")
+        .eq("business_id", businessId)
+        .eq("event_type", "visit")
+        .order("id")
+        .range(from, to)
+    ),
   ]);
-
-  if (messagesResult.error) throw new Error(messagesResult.error.message);
-  if (eventsResult.error) throw new Error(eventsResult.error.message);
-
-  const messages = (messagesResult.data ?? []) as MessageRow[];
-  const events = (eventsResult.data ?? []) as VisitRow[];
 
   const outreachByCustomer = new Map<string, { at: string }[]>();
   for (const m of messages) {

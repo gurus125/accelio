@@ -8,6 +8,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import type { ServiceBaselineRow } from "@/types/database";
+import { fetchAllPages } from "@/lib/supabase/paginate";
 
 export async function listServiceBaselines(
   businessId: string,
@@ -84,17 +85,19 @@ export async function listDistinctServiceNamesForBusiness(
   businessId: string,
   supabase: SupabaseClient = createClient()
 ): Promise<string[]> {
-  const { data, error } = await supabase
-    .from("customer_events")
-    .select("service")
-    .eq("business_id", businessId)
-    .eq("event_type", "visit")
-    .not("service", "is", null);
-
-  if (error) throw new Error(error.message);
+  const data = await fetchAllPages<{ service: string | null }>((from, to) =>
+    supabase
+      .from("customer_events")
+      .select("service")
+      .eq("business_id", businessId)
+      .eq("event_type", "visit")
+      .not("service", "is", null)
+      .order("id")
+      .range(from, to)
+  );
 
   const seen = new Map<string, string>();
-  for (const row of (data ?? []) as { service: string | null }[]) {
+  for (const row of data) {
     const trimmed = row.service?.trim();
     if (!trimmed) continue;
     const key = trimmed.toLowerCase();

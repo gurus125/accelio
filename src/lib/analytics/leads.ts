@@ -6,6 +6,7 @@
  */
 
 import { createClient } from "@/lib/supabase/server";
+import { fetchAllPages } from "@/lib/supabase/paginate";
 import type { AnalyticsDateRange } from "./date-range";
 import { computeRate, type RateResult } from "./rates";
 import type { LeadRow, LeadSource } from "@/types/database";
@@ -32,15 +33,16 @@ export interface LeadSourceBreakdownRow {
 
 async function listLeadsInRange(businessId: string, range: AnalyticsDateRange): Promise<LeadRow[]> {
   const supabase = createClient();
-  const { data, error } = await supabase
-    .from("leads")
-    .select("*")
-    .eq("business_id", businessId)
-    .gte("captured_at", range.startIso)
-    .lt("captured_at", range.endIso);
-
-  if (error) throw new Error(error.message);
-  return (data ?? []) as LeadRow[];
+  return fetchAllPages<LeadRow>((from, to) =>
+    supabase
+      .from("leads")
+      .select("*")
+      .eq("business_id", businessId)
+      .gte("captured_at", range.startIso)
+      .lt("captured_at", range.endIso)
+      .order("id")
+      .range(from, to)
+  );
 }
 
 /**

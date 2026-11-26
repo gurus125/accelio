@@ -9,6 +9,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import type { TimelineEntry } from "@/lib/whatsapp/types";
 import type { OutreachContext } from "./filters";
+import { fetchAllPages } from "@/lib/supabase/paginate";
 
 const QUALIFYING_STATUSES = new Set(["sent", "delivered", "read"]);
 
@@ -33,31 +34,36 @@ export async function getOutreachContextForBusiness(
   supabase: SupabaseClient = createClient()
 ): Promise<Map<string, OutreachContext>> {
 
-  const [outboundResult, inboundResult] = await Promise.all([
-    supabase
-      .from("messages")
-      .select("customer_id, sent_at")
-      .eq("business_id", businessId)
-      .in("status", ["sent", "delivered", "read"])
-      .not("sent_at", "is", null),
-    supabase
-      .from("customer_messages")
-      .select("customer_id, received_at")
-      .eq("business_id", businessId)
-      .not("customer_id", "is", null),
+  const [outboundRows, inboundRows] = await Promise.all([
+    fetchAllPages<OutboundRow>((from, to) =>
+      supabase
+        .from("messages")
+        .select("customer_id, sent_at")
+        .eq("business_id", businessId)
+        .in("status", ["sent", "delivered", "read"])
+        .not("sent_at", "is", null)
+        .order("id")
+        .range(from, to)
+    ),
+    fetchAllPages<InboundRow>((from, to) =>
+      supabase
+        .from("customer_messages")
+        .select("customer_id, received_at")
+        .eq("business_id", businessId)
+        .not("customer_id", "is", null)
+        .order("id")
+        .range(from, to)
+    ),
   ]);
 
-  if (outboundResult.error) throw new Error(outboundResult.error.message);
-  if (inboundResult.error) throw new Error(inboundResult.error.message);
-
   const lastOutboundByCustomer = new Map<string, string>();
-  for (const row of (outboundResult.data ?? []) as OutboundRow[]) {
+  for (const row of outboundRows) {
     const current = lastOutboundByCustomer.get(row.customer_id);
     if (!current || row.sent_at > current) lastOutboundByCustomer.set(row.customer_id, row.sent_at);
   }
 
   const lastInboundByCustomer = new Map<string, string>();
-  for (const row of (inboundResult.data ?? []) as InboundRow[]) {
+  for (const row of inboundRows) {
     const current = lastInboundByCustomer.get(row.customer_id);
     if (!current || row.received_at > current) lastInboundByCustomer.set(row.customer_id, row.received_at);
   }

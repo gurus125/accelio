@@ -9,6 +9,7 @@
  */
 
 import { createClient } from "@/lib/supabase/server";
+import { fetchAllPages } from "@/lib/supabase/paginate";
 import type { AnalyticsDateRange } from "./date-range";
 import { computeCustomerReactivation } from "./reactivation";
 import type { OpportunityType } from "@/lib/opportunities/types";
@@ -41,48 +42,57 @@ export async function getOpportunityTypeAnalytics(
 ): Promise<OpportunityTypeAnalytics[]> {
   const supabase = createClient();
 
-  const { data, error } = await supabase
-    .from("messages")
-    .select("customer_id, opportunity_type, sent_at")
-    .eq("business_id", businessId)
-    .in("status", ["sent", "delivered", "read"])
-    .gte("sent_at", range.startIso)
-    .lt("sent_at", range.endIso)
-    .in("opportunity_type", OPPORTUNITY_TYPES);
-
-  if (error) throw new Error(error.message);
-  const rows = (data ?? []) as MessageRow[];
+  const rows = await fetchAllPages<MessageRow>((from, to) =>
+    supabase
+      .from("messages")
+      .select("customer_id, opportunity_type, sent_at")
+      .eq("business_id", businessId)
+      .in("status", ["sent", "delivered", "read"])
+      .gte("sent_at", range.startIso)
+      .lt("sent_at", range.endIso)
+      .in("opportunity_type", OPPORTUNITY_TYPES)
+      .order("id")
+      .range(from, to)
+  );
 
   const customerIdsInvolved = [...new Set(rows.map((r) => r.customer_id))];
   if (customerIdsInvolved.length === 0) {
     return OPPORTUNITY_TYPES.map((type) => ({ type, contacted: 0, repliesTotal: 0, customersReplied: 0, returned: 0 }));
   }
 
-  const [repliesResult, eventsResult] = await Promise.all([
-    supabase
-      .from("customer_messages")
-      .select("customer_id")
-      .eq("business_id", businessId)
-      .in("customer_id", customerIdsInvolved)
-      .gte("received_at", range.startIso)
-      .lt("received_at", range.endIso),
-    supabase
-      .from("customer_events")
-      .select("customer_id, occurred_at, amount")
-      .eq("business_id", businessId)
-      .eq("event_type", "visit")
-      .in("customer_id", customerIdsInvolved),
+  // Business-wide pages filtered in memory, rather than `.in(customer_id,
+  // [...hundreds of ids])` which puts every id in the request URL.
+  const involved = new Set(customerIdsInvolved);
+  const [replyRows, visitRows] = await Promise.all([
+    fetchAllPages<{ customer_id: string | null }>((from, to) =>
+      supabase
+        .from("customer_messages")
+        .select("customer_id")
+        .eq("business_id", businessId)
+        .not("customer_id", "is", null)
+        .gte("received_at", range.startIso)
+        .lt("received_at", range.endIso)
+        .order("id")
+        .range(from, to)
+    ),
+    fetchAllPages<{ customer_id: string; occurred_at: string; amount: number | null }>((from, to) =>
+      supabase
+        .from("customer_events")
+        .select("customer_id, occurred_at, amount")
+        .eq("business_id", businessId)
+        .eq("event_type", "visit")
+        .order("id")
+        .range(from, to)
+    ),
   ]);
 
-  if (repliesResult.error) throw new Error(repliesResult.error.message);
-  if (eventsResult.error) throw new Error(eventsResult.error.message);
-
   const repliedCustomers = new Set(
-    ((repliesResult.data ?? []) as { customer_id: string }[]).map((r) => r.customer_id)
+    replyRows.map((r) => r.customer_id).filter((id): id is string => id !== null && involved.has(id))
   );
 
   const visitsByCustomer = new Map<string, { at: string; amount: number | null }[]>();
-  for (const e of (eventsResult.data ?? []) as { customer_id: string; occurred_at: string; amount: number | null }[]) {
+  for (const e of visitRows) {
+    if (!involved.has(e.customer_id)) continue;
     const list = visitsByCustomer.get(e.customer_id) ?? [];
     list.push({ at: e.occurred_at, amount: e.amount });
     visitsByCustomer.set(e.customer_id, list);

@@ -9,6 +9,7 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
+import { fetchAllPages } from "@/lib/supabase/paginate";
 import type {
   AutomationActionType,
   AutomationLanguage,
@@ -159,9 +160,9 @@ export async function stampAutomationLastRunAt(
  * one business's own rows anyway, which is exactly why the scheduler needs
  * the admin client instead). */
 export async function listActiveAutomationsAcrossAllBusinesses(supabase: SupabaseClient): Promise<AutomationRow[]> {
-  const { data, error } = await supabase.from("automations").select("*").eq("status", "active");
-  if (error) throw new Error(error.message);
-  return (data ?? []) as AutomationRow[];
+  return fetchAllPages<AutomationRow>((from, to) =>
+    supabase.from("automations").select("*").eq("status", "active").order("id").range(from, to)
+  );
 }
 
 export async function recordAutomationRun(

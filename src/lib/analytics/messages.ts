@@ -6,6 +6,7 @@
  */
 
 import { createClient } from "@/lib/supabase/server";
+import { fetchAllPages } from "@/lib/supabase/paginate";
 import type { AnalyticsDateRange } from "./date-range";
 import { computeRate, type RateResult } from "./rates";
 import { isQualifyingOutreachStatus } from "./reactivation";
@@ -31,16 +32,17 @@ interface QualifyingMessageRow {
 
 async function fetchQualifyingMessages(businessId: string, range: AnalyticsDateRange): Promise<QualifyingMessageRow[]> {
   const supabase = createClient();
-  const { data, error } = await supabase
-    .from("messages")
-    .select("customer_id, status")
-    .eq("business_id", businessId)
-    .in("status", QUALIFYING_STATUSES)
-    .gte("sent_at", range.startIso)
-    .lt("sent_at", range.endIso);
-
-  if (error) throw new Error(error.message);
-  return (data ?? []) as QualifyingMessageRow[];
+  return fetchAllPages<QualifyingMessageRow>((from, to) =>
+    supabase
+      .from("messages")
+      .select("customer_id, status")
+      .eq("business_id", businessId)
+      .in("status", QUALIFYING_STATUSES)
+      .gte("sent_at", range.startIso)
+      .lt("sent_at", range.endIso)
+      .order("id")
+      .range(from, to)
+  );
 }
 
 /**
@@ -51,18 +53,20 @@ async function fetchQualifyingMessages(businessId: string, range: AnalyticsDateR
 export async function getMessageMetrics(businessId: string, range: AnalyticsDateRange): Promise<MessageMetrics> {
   const supabase = createClient();
 
-  const [messages, repliesResult] = await Promise.all([
+  const [messages, replyRows] = await Promise.all([
     fetchQualifyingMessages(businessId, range),
-    supabase
-      .from("customer_messages")
-      .select("customer_id")
-      .eq("business_id", businessId)
-      .not("customer_id", "is", null)
-      .gte("received_at", range.startIso)
-      .lt("received_at", range.endIso),
+    fetchAllPages<{ customer_id: string | null }>((from, to) =>
+      supabase
+        .from("customer_messages")
+        .select("customer_id")
+        .eq("business_id", businessId)
+        .not("customer_id", "is", null)
+        .gte("received_at", range.startIso)
+        .lt("received_at", range.endIso)
+        .order("id")
+        .range(from, to)
+    ),
   ]);
-
-  if (repliesResult.error) throw new Error(repliesResult.error.message);
 
   // Sanity-check the qualifying-status filter matches the shared
   // reactivation definition, so "sent" here always means the same thing
@@ -74,7 +78,6 @@ export async function getMessageMetrics(businessId: string, range: AnalyticsDate
   const read = sentMessages.filter((m) => m.status === "read").length;
   const customersContacted = new Set(sentMessages.map((m) => m.customer_id)).size;
 
-  const replyRows = (repliesResult.data ?? []) as { customer_id: string | null }[];
   const repliesTotal = replyRows.length;
   const customersReplied = new Set(
     replyRows.map((r) => r.customer_id).filter((id): id is string => id !== null)
