@@ -19,6 +19,10 @@ export interface BusinessRow {
    * business, regardless of each automation's own status. Never cleared
    * automatically. */
   automations_paused_at: string | null;
+  /** Milestone 1 — IANA zone for every "today"/date/hour decision
+   * (migration 0017). Defaults to Asia/Kolkata; read it via
+   * `getBusinessTimeZone()` so a missing/invalid value falls back safely. */
+  timezone?: string | null;
   created_at: string;
   updated_at: string;
 }
