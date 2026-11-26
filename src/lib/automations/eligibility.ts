@@ -9,7 +9,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { normalizePhoneForWhatsApp } from "@/lib/whatsapp/phone";
 import { checkCustomerConsent } from "@/lib/consent";
-import { getWhatsAppConnection, findRecentDuplicateMessage } from "@/lib/whatsapp/queries";
+import { getActiveWhatsAppConnection, findRecentDuplicateMessage } from "@/lib/whatsapp/queries";
 import { isEligibleToday, type OutreachContext } from "@/lib/recommendations/filters";
 import type { LeadRow } from "@/types/database";
 import {
@@ -178,7 +178,7 @@ export async function checkCandidateEligibility(params: EligibilityCheckParams):
       return { eligible: false, reason: "missing_template", detail: "No approved message is set up yet." };
     }
 
-    const connection = await getWhatsAppConnection(automation.business_id, params.supabase);
+    const connection = await getActiveWhatsAppConnection(automation.business_id, params.supabase);
     if (!connection) {
       return { eligible: false, reason: "whatsapp_not_connected", detail: "WhatsApp isn't connected yet." };
     }

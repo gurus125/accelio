@@ -12,7 +12,7 @@ import { createClient } from "@/lib/supabase/server";
 import { requireBusinessForCurrentUser } from "@/lib/business/queries";
 import { requireOwner } from "@/lib/auth/access";
 import { normalizePhoneForWhatsApp } from "@/lib/whatsapp/phone";
-import { getWhatsAppConnection } from "@/lib/whatsapp/queries";
+import { getActiveWhatsAppConnection } from "@/lib/whatsapp/queries";
 import { decideSendMode, dispatchWhatsAppMessage } from "@/lib/whatsapp/send";
 import {
   createAutomation,
@@ -194,7 +194,7 @@ export async function sendAutomationTestMessage(automationId: string): Promise<{
     return { error: "This automation doesn't send a WhatsApp message, so there's nothing to test." };
   }
 
-  const connection = await getWhatsAppConnection(business.id);
+  const connection = await getActiveWhatsAppConnection(business.id);
   if (!connection) return { error: "Connect WhatsApp in Settings first." };
 
   const sampleContent = personalizeAutomationMessage(automation.message_template, {

@@ -17,7 +17,7 @@ import { getCustomer } from "@/lib/customers/queries";
 import { getLead, markLeadContacted } from "@/lib/leads/queries";
 import {
   reserveWhatsAppMessage,
-  getWhatsAppConnection,
+  getActiveWhatsAppConnection,
   markMessageFailed,
   markMessageSent,
 } from "@/lib/whatsapp/queries";
@@ -271,7 +271,7 @@ export async function runAutomationOnce(
 
     const messageRecord = reservation.message;
 
-    const connection = await getWhatsAppConnection(business.id, supabase);
+    const connection = await getActiveWhatsAppConnection(business.id, supabase);
     const phoneNumberId = connection?.phone_number_id ?? "";
     const recipientFirstName = (
       customerName ?? candidate.templateContext.customerName ?? candidate.templateContext.leadName ?? "there"

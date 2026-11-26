@@ -40,6 +40,9 @@ export async function handleInboundMessages(
     .from("whatsapp_connections")
     .select("business_id")
     .eq("phone_number_id", phoneNumberId)
+    // Only the business currently CONNECTED to this number (unique since
+    // migration 0019) — never a stale or failed attempt by someone else.
+    .eq("connection_status", "connected")
     .maybeSingle();
 
   if (connectionError) {
