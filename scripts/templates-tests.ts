@@ -7,6 +7,7 @@ import * as path from "path";
 import { DEFAULT_TEMPLATES, TEMPLATE_KEYS, TEMPLATE_LANGUAGES, VARIABLE_EXAMPLES } from "@/lib/templates/catalog";
 import { bodyPlaceholders, buildTemplateParameters, renderTemplateBody, sanitizeTemplateParameter, firstName } from "@/lib/templates/render";
 import { templateSeedValuesSql } from "@/lib/templates/seed-sql";
+import { buildMetaTemplatePayload, mapMetaTemplateStatus, matchMetaStatuses } from "@/lib/templates/meta";
 
 let passed = 0;
 let failed = 0;
@@ -67,6 +68,44 @@ for (const t of DEFAULT_TEMPLATES) {
   const r = buildTemplateParameters(t.variables, VARIABLE_EXAMPLES);
   eq(r.ok, true, `${t.name}/${t.language}: example values fill every variable (needed for Meta review)`);
 }
+
+// Meta API payloads and statuses.
+const offerEn = DEFAULT_TEMPLATES.find((t) => t.key === "offer" && t.language === "en")!;
+eq(
+  buildMetaTemplatePayload({ ...offerEn, meta_language_code: "en" }),
+  {
+    name: "accelio_offer_v1",
+    language: "en",
+    category: "MARKETING",
+    components: [{ type: "BODY", text: offerEn.body, example: { body_text: [["Priya", "Style Studio", "20% off on hair spa this week"]] } }],
+  },
+  "Meta create payload includes an example for every variable"
+);
+const billHi = DEFAULT_TEMPLATES.find((t) => t.key === "whatsapp_bill" && t.language === "hi")!;
+eq((buildMetaTemplatePayload({ ...billHi, meta_language_code: "hi" }) as { category: string; language: string }).category, "UTILITY", "bill is a utility template");
+eq(mapMetaTemplateStatus("APPROVED"), "approved", "APPROVED -> approved");
+eq(mapMetaTemplateStatus("PENDING"), "submitted", "PENDING -> in review");
+eq(mapMetaTemplateStatus("REJECTED"), "rejected", "REJECTED -> rejected");
+eq(mapMetaTemplateStatus("PAUSED"), "paused", "PAUSED -> paused");
+eq(mapMetaTemplateStatus("SOMETHING_NEW"), "submitted", "unknown status is never treated as approved");
+eq(
+  matchMetaStatuses(
+    [
+      { id: "a", name: "accelio_offer_v1", meta_language_code: "en", status: "draft" },
+      { id: "b", name: "accelio_offer_v1", meta_language_code: "hi", status: "draft" },
+      { id: "c", name: "accelio_review_request_v1", meta_language_code: "en", status: "draft" },
+    ],
+    [
+      { id: "m1", name: "accelio_offer_v1", language: "en", status: "APPROVED" },
+      { id: "m2", name: "accelio_offer_v1", language: "hi", status: "REJECTED", rejected_reason: "INVALID_FORMAT" },
+    ]
+  ),
+  [
+    { id: "a", status: "approved", providerTemplateId: "m1", rejectionReason: null },
+    { id: "b", status: "rejected", providerTemplateId: "m2", rejectionReason: "INVALID_FORMAT" },
+  ],
+  "statuses matched on name + language; unknown templates left alone"
+);
 
 // The migration's seed must be exactly what the catalog generates.
 const migration = fs.readFileSync(path.join(process.cwd(), "supabase/migrations/0020_m2_message_templates.sql"), "utf8");

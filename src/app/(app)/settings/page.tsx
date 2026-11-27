@@ -1,4 +1,4 @@
-import { Store, MessageCircle, Database, Bell, CreditCard, Server, UserCircle, Wrench, Globe, Zap, CalendarClock } from "lucide-react";
+import { FileText, Store, MessageCircle, Database, Bell, CreditCard, Server, UserCircle, Wrench, Globe, Zap, CalendarClock } from "lucide-react";
 import { headers } from "next/headers";
 import { TopBar } from "@/components/layout/topbar";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -12,6 +12,9 @@ import { LogoutButton } from "@/components/auth/logout-button";
 import { BusinessProfileForm } from "@/components/settings/business-profile-form";
 import { SeedDemoDataButton } from "@/components/settings/seed-demo-data-button";
 import { WhatsAppConnectionCard } from "@/components/settings/whatsapp-connection-card";
+import { WhatsAppTemplatesCard } from "@/components/settings/whatsapp-templates-card";
+import { listMessageTemplates } from "@/lib/templates/queries";
+import { businessTemplateLanguage } from "@/lib/templates/prepare";
 import { LeadWidgetCard } from "@/components/settings/lead-widget-card";
 import { AutomationsPauseAllCard } from "@/components/settings/automations-pause-all-card";
 import { ServiceBaselinesCard } from "@/components/settings/service-baselines-card";
@@ -53,6 +56,7 @@ export default async function SettingsPage() {
     isSupabaseConfigured && business ? await listServiceBaselines(business.id) : [];
   const suggestedServices =
     isSupabaseConfigured && business ? await listDistinctServiceNamesForBusiness(business.id) : [];
+  const messageTemplates = isSupabaseConfigured && business ? await listMessageTemplates(business.id) : [];
 
   // Derived from the request itself (never hardcoded) so the embed snippet
   // always points at wherever this Accelio instance is actually running —
@@ -176,6 +180,29 @@ export default async function SettingsPage() {
             )}
           </CardContent>
         </Card>
+
+        {isSupabaseConfigured && business && (
+          <Card id="whatsapp-templates">
+            <CardHeader className="flex-row items-center gap-3 space-y-0">
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-success-50 text-success-600">
+                <FileText className="h-4 w-4" />
+              </div>
+              <div>
+                <CardTitle>WhatsApp templates</CardTitle>
+                <CardDescription>Approved messages for reminders, offers, reviews, bills and your daily digest.</CardDescription>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <WhatsAppTemplatesCard
+                templates={messageTemplates}
+                language={businessTemplateLanguage(business)}
+                discreet={business.discreet_reminders === true}
+                whatsappConnected={whatsappConnection?.connection_status === "connected"}
+                hasBusinessAccountId={Boolean(whatsappConnection?.business_account_id)}
+              />
+            </CardContent>
+          </Card>
+        )}
 
         <Card>
           <CardHeader className="flex-row items-center gap-3 space-y-0">
