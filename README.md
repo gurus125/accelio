@@ -468,8 +468,9 @@ the official Meta WhatsApp Cloud API — never automatically.
 - `src/lib/whatsapp/` holds all the logic: `config.ts` (server-only env
   access), `types.ts`, `phone.ts` (conservative Indian mobile number
   normalization — returns null rather than guessing), `client.ts` (the one
-  place that calls `graph.facebook.com`), `send.ts` (decides template vs.
-  free-form), `queries.ts`, and `actions.ts` (the Settings connect/disconnect
+  place that calls `graph.facebook.com`), `send.ts` (dispatches a send plan;
+  the free-form vs. template decision lives in `src/lib/templates/plan.ts`
+  since Milestone 2), `queries.ts`, and `actions.ts` (the Settings connect/disconnect
   server actions). `POST /api/whatsapp/send`
   (`src/app/api/whatsapp/send/route.ts`) is the only endpoint that can
   actually send — it re-derives the business, customer, WhatsApp connection,
@@ -569,7 +570,8 @@ any conversation manually on WhatsApp itself.
   subscribed to the `messages` field.
 - **Not implemented in Phase 9** (by design — see the Phase 9 spec): AI
   auto-replies or chatbot behavior, automatic follow-ups, bulk/campaign
-  sending, and full WhatsApp template management. AI message generation
+  sending, and full WhatsApp template management (templates were added in
+  Milestone 2 — see "WhatsApp templates" above). AI message generation
   (Phase 7) remains owner-initiated only.
 - **Verification note**: webhook processing, status transitions, and
   idempotency were verified directly against the database (simulating

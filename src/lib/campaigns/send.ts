@@ -24,7 +24,11 @@ import {
   markMessageSent,
   markMessageFailed,
 } from "@/lib/whatsapp/queries";
-import { decideSendMode, dispatchWhatsAppMessage } from "@/lib/whatsapp/send";
+import { dispatchWhatsAppMessage, messageRecordFields } from "@/lib/whatsapp/send";
+import { businessTemplateLanguage, prepareWhatsAppSend } from "@/lib/templates/prepare";
+import { isInsideServiceWindow, planText, planWhatsAppSend } from "@/lib/templates/plan";
+import { purposeForCampaignType } from "@/lib/templates/purpose";
+import { getRecentInboundByCustomer, listMessageTemplates } from "@/lib/templates/queries";
 import { getRemainingWhatsAppMessageQuota, getWhatsAppReservationContext } from "@/lib/billing/limits";
 import { listRecipientsWithCustomers } from "./queries";
 import { personalizeMessage } from "./personalize";
@@ -71,12 +75,36 @@ export async function sendCampaignMessages(
     return { error: "Your business's billing couldn't be verified. Please contact support." };
   }
 
+  // Milestone 2 — load templates and who's inside the 24h window once for
+  // the whole campaign. If anyone needs a template that isn't approved,
+  // stop before sending anything rather than half-send the campaign.
+  const now = new Date();
+  const purpose = purposeForCampaignType(campaign.campaign_type);
+  const [templates, recentInbound] = await Promise.all([
+    listMessageTemplates(business.id, supabase),
+    getRecentInboundByCustomer(business.id, now, supabase),
+  ]);
+  const needsTemplate = pending.some((r) => !isInsideServiceWindow(recentInbound.get(r.customer_id) ?? null, now));
+  if (needsTemplate) {
+    const probe = planWhatsAppSend({
+      now,
+      lastInboundAt: null,
+      purpose,
+      freeformText: campaign.message_template,
+      language: businessTemplateLanguage(business),
+      discreet: business.discreet_reminders === true,
+      templates,
+      values: { customer_first_name: "x", business_name: business.name, service: "x" },
+    });
+    if (!probe.ok && probe.code === "no_approved_template") {
+      return { error: probe.error };
+    }
+  }
+
   await supabase
     .from("campaigns")
     .update({ status: "sending", started_at: new Date().toISOString() })
     .eq("id", campaign.id);
-
-  const decision = decideSendMode();
 
   for (let i = 0; i < pending.length; i += SEND_CONCURRENCY) {
     const batch = pending.slice(i, i + SEND_CONCURRENCY);
@@ -114,13 +142,29 @@ export async function sendCampaignMessages(
           businessName: business.name,
         });
 
+        const plan = await prepareWhatsAppSend({
+          business,
+          recipient: { customerId: recipient.customer_id, name: recipient.customerName },
+          purpose,
+          freeformText: content,
+          templates,
+          lastInboundAt: recentInbound.get(recipient.customer_id) ?? null,
+          now,
+          supabase,
+        });
+        if (!plan.ok) {
+          await supabase.from("campaign_recipients").update({ status: "failed" }).eq("id", recipient.id);
+          return;
+        }
+        const { messageType, templateName } = messageRecordFields(plan);
+
         const reservation = await reserveWhatsAppMessage({
           businessId: business.id,
           customerId: recipient.customer_id,
           opportunityType: `campaign:${campaign.campaign_type}`,
-          messageType: decision.messageType,
-          templateName: decision.templateName,
-          content,
+          messageType,
+          templateName,
+          content: planText(plan),
           periodStart: reservationContext.periodStart,
           limit: reservationContext.limit,
         });
@@ -143,10 +187,7 @@ export async function sendCampaignMessages(
         const result = await dispatchWhatsAppMessage({
           phoneNumberId: connection.phone_number_id as string,
           to: normalizedPhone,
-          content,
-          customerFirstName: recipient.customerName.split(" ")[0] || recipient.customerName,
-          businessName: business.name,
-          decision,
+          plan,
         });
 
         if (!result.ok) {

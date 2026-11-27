@@ -30,7 +30,7 @@ interface MessageGeneratorProps {
 }
 
 type Status = "idle" | "loading" | "generated" | "edited" | "ready" | "error";
-type SendState = "idle" | "confirming" | "sending" | "sent" | "error";
+type SendState = "idle" | "previewing" | "confirming" | "sending" | "sent" | "error";
 
 interface GenerateResponse {
   ok: boolean;
@@ -42,6 +42,8 @@ interface SendResponse {
   ok: boolean;
   data?: MessageRow;
   error?: string;
+  /** Milestone 2 — dry-run preview of exactly what would be sent. */
+  preview?: { mode: "freeform" | "template"; text: string; note: string | null };
 }
 
 const FALLBACK_GENERATE_ERROR = "We couldn't generate a message right now. Please try again.";
@@ -76,6 +78,7 @@ export function MessageGenerator({
   const [sendState, setSendState] = React.useState<SendState>("idle");
   const [sendError, setSendError] = React.useState<string | null>(null);
   const [sentMessage, setSentMessage] = React.useState<MessageRow | null>(null);
+  const [preview, setPreview] = React.useState<SendResponse["preview"] | null>(null);
 
   // Guards against a stale response landing after a newer request (e.g. a
   // fast double-click on Regenerate) from overwriting the latest one.
@@ -131,6 +134,39 @@ export function MessageGenerator({
     setStatus("ready");
   };
 
+  const sendBody = React.useCallback(
+    (extra: Record<string, unknown> = {}) =>
+      JSON.stringify(
+        leadId ? { leadId, content: message, ...extra } : { customerId, content: message, opportunityType, ...extra }
+      ),
+    [leadId, customerId, message, opportunityType]
+  );
+
+  /** Milestone 2 — ask the server what will ACTUALLY be sent (free-form vs
+   * the approved template) before the owner confirms. */
+  const handleOpenConfirm = async () => {
+    setSendState("previewing");
+    setSendError(null);
+    try {
+      const response = await fetch("/api/whatsapp/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: sendBody({ dryRun: true }),
+      });
+      const json = (await response.json().catch(() => ({ ok: false }))) as SendResponse;
+      if (!response.ok || !json.ok || !json.preview) {
+        setSendState("error");
+        setSendError(json.error ?? FALLBACK_SEND_ERROR);
+        return;
+      }
+      setPreview(json.preview);
+      setSendState("confirming");
+    } catch {
+      setSendState("error");
+      setSendError(FALLBACK_SEND_ERROR);
+    }
+  };
+
   const handleSend = async () => {
     if (isSending) return; // guards against a double-click while a send is in flight
     setSendState("sending");
@@ -140,9 +176,7 @@ export function MessageGenerator({
       const response = await fetch("/api/whatsapp/send", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(
-          leadId ? { leadId, content: message } : { customerId, content: message, opportunityType }
-        ),
+        body: sendBody(),
       });
 
       let json: SendResponse;
@@ -246,8 +280,12 @@ export function MessageGenerator({
                 <p className="text-sm text-danger-600">This customer has an invalid WhatsApp number.</p>
               ) : (
                 <>
-                  <Button size="sm" onClick={() => setSendState("confirming")} disabled={isSending}>
-                    <MessageCircle className="h-3.5 w-3.5" />
+                  <Button size="sm" onClick={handleOpenConfirm} disabled={isSending || sendState === "previewing"}>
+                    {sendState === "previewing" ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <MessageCircle className="h-3.5 w-3.5" />
+                    )}
                     Send on WhatsApp
                   </Button>
                   {sendState === "error" && sendError && <p className="text-sm text-danger-600">{sendError}</p>}
@@ -282,7 +320,13 @@ export function MessageGenerator({
         title={`Send this message to ${customerName}?`}
       >
         <div className="space-y-4">
-          <WhatsappBubble message={message} />
+          <WhatsappBubble message={preview?.text ?? message} />
+          {preview?.note && (
+            <p className="rounded-lg bg-muted/60 p-2.5 text-xs text-muted-foreground">
+              {preview.mode === "template" ? "Approved template: " : ""}
+              {preview.note}
+            </p>
+          )}
           {customerPhoneDisplay && (
             <p className="text-sm text-muted-foreground">
               To: <span className="font-medium text-foreground">{customerPhoneDisplay}</span>
