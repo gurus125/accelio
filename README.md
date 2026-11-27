@@ -51,6 +51,32 @@ Then open [http://localhost:3000](http://localhost:3000).
 
 Apply migrations `0015`–`0019` in order (SQL Editor or `supabase db push`).
 
+## WhatsApp templates (Milestone 2)
+
+WhatsApp only delivers your own free-form text to a customer who messaged
+you in the last 24 hours. Everyone else must get a template WhatsApp has
+**approved**. Every send (manual, campaign, automation, test) goes through
+one planner, `src/lib/templates/plan.ts`:
+
+1. **Inside the 24h window:** the reviewed text is sent as written.
+2. **Otherwise:** the approved template for the message's purpose is sent
+   (return reminder, offer, feedback/review request, WhatsApp bill, owner
+   daily digest), in the business's language (English / हिन्दी / Hinglish),
+   falling back to English. Variables are filled from real data. AI or
+   owner text can only fill the offer's `{{3}}` slot; it never replaces the
+   approved wording.
+3. **Discreet mode** (Settings, on by default for parlours): reminders use a
+   template with no service slot, a free-form reminder naming a service is
+   refused, and the AI never sees or writes service names.
+
+Templates live in `message_templates` (migration `0020`), seeded for every
+business from `src/lib/templates/catalog.ts`, which is the source of truth;
+a test keeps the migration in sync. **Settings → WhatsApp templates**
+submits them to Meta (needs the WhatsApp Business Account ID on the
+connection), refreshes their review status, or lets you mark one approved
+if you created it yourself in WhatsApp Manager. The send dialog shows the
+exact text that will go out, and why.
+
 ## Environment variables
 
 Copy `.env.example` to `.env.local` and fill in your own Supabase project's
