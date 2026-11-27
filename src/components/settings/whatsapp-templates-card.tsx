@@ -19,8 +19,22 @@ import {
   TEMPLATE_LANGUAGES,
   type TemplateLanguage,
   type TemplateStatus,
+  type TemplateVariable,
 } from "@/lib/templates/catalog";
 import type { MessageTemplateRow } from "@/types/database";
+
+const VARIABLE_LABELS: Record<TemplateVariable, string> = {
+  customer_first_name: "customer's first name",
+  business_name: "your business name",
+  service: "service (e.g. haircut)",
+  offer_text: "your offer text",
+  bill_items: "bill items",
+  bill_total: "bill total",
+  bill_date: "bill date",
+  owner_first_name: "your first name",
+  due_count: "customers due today",
+  estimated_amount: "estimated ₹",
+};
 
 const STATUS_BADGE: Record<TemplateStatus, { label: string; variant: "success" | "warning" | "danger" | "muted" }> = {
   approved: { label: "Approved", variant: "success" },
@@ -194,6 +208,11 @@ export function WhatsAppTemplatesCard({
                       </span>
                     </p>
                     <p className="whitespace-pre-wrap rounded-lg bg-muted/50 p-2.5">{t.body}</p>
+                    {t.variables.length > 0 && (
+                      <p className="text-xs text-muted-foreground">
+                        {t.variables.map((v, i) => `{{${i + 1}}} = ${VARIABLE_LABELS[v]}`).join(" · ")}
+                      </p>
+                    )}
                     {t.rejection_reason && <p className="text-xs text-danger-600">WhatsApp said: {t.rejection_reason}</p>}
                     <div className="flex flex-wrap gap-2">
                       {t.status !== "approved" ? (
