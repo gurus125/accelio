@@ -57,6 +57,11 @@ export interface Opportunity {
   customerId: string;
   customerName: string;
   customerPhone: string;
+  /** Milestone 1 — false when the customer opted out (STOP) or never agreed
+   * to WhatsApp messages. The opportunity still exists (they ARE due), but
+   * it is not recommended for a WhatsApp send. Every actual send path
+   * re-checks consent itself, so this is a display filter only. */
+  customerCanMessage?: boolean;
   type: OpportunityType;
   /** Short, plain-language label for the opportunity type. */
   title: string;

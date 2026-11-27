@@ -5,6 +5,10 @@ import { createClient } from "@/lib/supabase/server";
 import { requireBusinessForCurrentUser } from "@/lib/business/queries";
 import { getRemainingCustomerQuota } from "@/lib/billing/limits";
 import type { ImportBatchOutcome, ImportFailure } from "@/types/import";
+import { INVALID_PHONE_MESSAGE, normalizeIndianMobile } from "@/lib/phone";
+import { chunk, fetchAllPages } from "@/lib/supabase/paginate";
+import { buildImportedEvents } from "@/lib/import/events";
+import { getBusinessTimeZone } from "@/lib/dates";
 
 /**
  * Returns only the phone numbers already on file for the CURRENT business —
@@ -24,13 +28,15 @@ export async function getExistingPhonesForImport(): Promise<{ error?: string; ph
   }
 
   const supabase = createClient();
-  const { data, error } = await supabase
-    .from("customers")
-    .select("phone")
-    .eq("business_id", business.id);
-
-  if (error) return { error: error.message };
-  return { phones: (data ?? []).map((row) => row.phone) };
+  try {
+    const rows = await fetchAllPages<{ phone: string }>((from, to) =>
+      supabase.from("customers").select("phone").eq("business_id", business.id).order("id").range(from, to)
+    );
+    // Normalised so a legacy un-normalised row still counts as a duplicate.
+    return { phones: rows.map((row) => normalizeIndianMobile(row.phone) ?? row.phone) };
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Couldn't load your existing customers." };
+  }
 }
 
 export interface ImportRowInput {
@@ -39,6 +45,7 @@ export interface ImportRowInput {
   phone: string;
   email: string | null;
   lastVisit: string | null;
+  service?: string | null;
   totalSpent: number | null;
   visitCount: number | null;
   notes: string | null;
@@ -66,7 +73,10 @@ export interface ImportRowInput {
 // server-side, independent of how the request was made.
 const MAX_BATCH_SIZE = 500;
 
-export async function importCustomerBatch(rows: ImportRowInput[]): Promise<ImportBatchOutcome> {
+export async function importCustomerBatch(
+  rows: ImportRowInput[],
+  options: { whatsappConsent?: boolean } = {}
+): Promise<ImportBatchOutcome> {
   let business;
   try {
     business = await requireBusinessForCurrentUser();
@@ -79,24 +89,45 @@ export async function importCustomerBatch(rows: ImportRowInput[]): Promise<Impor
     return { error: `A single import batch can include at most ${MAX_BATCH_SIZE} rows.`, insertedCount: 0, failed: [] };
   }
 
+  // Never trust the client's normalisation — re-run the shared normaliser
+  // and refuse rows it can't read.
+  const invalid: ImportFailure[] = [];
+  const seenInBatch = new Set<string>();
+  const normalizedRows: ImportRowInput[] = [];
+  for (const row of rows) {
+    const phone = normalizeIndianMobile(row.phone);
+    if (!phone) {
+      invalid.push({ rowNumber: row.rowNumber, name: row.name, phone: row.phone, reason: INVALID_PHONE_MESSAGE });
+    } else if (seenInBatch.has(phone)) {
+      invalid.push({ rowNumber: row.rowNumber, name: row.name, phone, reason: "Same phone number appears earlier in this file" });
+    } else {
+      seenInBatch.add(phone);
+      normalizedRows.push({ ...row, phone });
+    }
+  }
+  rows = normalizedRows;
+  if (rows.length === 0) return { insertedCount: 0, failed: invalid };
+
   const supabase = createClient();
-  const phones = rows.map((r) => r.phone);
-
-  const { data: existing, error: existingError } = await supabase
-    .from("customers")
-    .select("phone")
-    .eq("business_id", business.id)
-    .in("phone", phones);
-
-  if (existingError) {
-    return { error: existingError.message, insertedCount: 0, failed: [] };
+  // Chunked: `.in()` puts every value in the request URL.
+  const existingSet = new Set<string>();
+  for (const phoneChunk of chunk(rows.map((r) => r.phone), 100)) {
+    const { data: existing, error: existingError } = await supabase
+      .from("customers")
+      .select("phone")
+      .eq("business_id", business.id)
+      .in("phone", phoneChunk);
+    if (existingError) {
+      return { error: existingError.message, insertedCount: 0, failed: [] };
+    }
+    for (const row of existing ?? []) existingSet.add(row.phone as string);
   }
 
-  const existingSet = new Set((existing ?? []).map((row) => row.phone));
   let toInsert = rows.filter((r) => !existingSet.has(r.phone));
-  const skipped: ImportFailure[] = rows
+  const skipped: ImportFailure[] = [...invalid];
+  skipped.push(...rows
     .filter((r) => existingSet.has(r.phone))
-    .map((r) => ({ rowNumber: r.rowNumber, name: r.name, phone: r.phone, reason: "Already exists in your customer list" }));
+    .map((r) => ({ rowNumber: r.rowNumber, name: r.name, phone: r.phone, reason: "Already exists in your customer list" })));
 
   // Phase 16 — a CSV import is the one path that can add many customers in
   // one call, bypassing `createCustomer`'s own per-row check. Rather than
@@ -121,6 +152,9 @@ export async function importCustomerBatch(rows: ImportRowInput[]): Promise<Impor
     return { insertedCount: 0, failed: skipped };
   }
 
+  const consentGiven = options.whatsappConsent === true;
+  const consentAt = new Date().toISOString();
+
   const { data: inserted, error: insertError } = await supabase
     .from("customers")
     .insert(
@@ -129,6 +163,9 @@ export async function importCustomerBatch(rows: ImportRowInput[]): Promise<Impor
         name: r.name,
         phone: r.phone,
         notes: r.notes,
+        whatsapp_consent: consentGiven,
+        consent_source: consentGiven ? "import" : null,
+        consent_at: consentGiven ? consentAt : null,
       }))
     )
     .select("id, phone");
@@ -148,33 +185,40 @@ export async function importCustomerBatch(rows: ImportRowInput[]): Promise<Impor
     };
   }
 
-  // Best-effort: one summarizing "imported" activity event per new customer
-  // that actually had spend/visit/date info in the file — never fabricated
-  // individual visit dates we don't have.
-  const events = toInsert
-    .map((row) => {
-      const match = inserted?.find((i) => i.phone === row.phone);
-      if (!match) return null;
-      if (row.totalSpent == null && row.visitCount == null && row.lastVisit == null) return null;
-
-      const noteParts = ["Imported customer record"];
-      if (row.visitCount != null) {
-        noteParts.push(`${row.visitCount} visit${row.visitCount === 1 ? "" : "s"} on record`);
-      }
-
-      return {
-        business_id: business.id,
-        customer_id: match.id,
-        event_type: "other" as const,
-        amount: row.totalSpent,
-        occurred_at: row.lastVisit ?? new Date().toISOString(),
-        notes: noteParts.join(" — "),
-      };
-    })
-    .filter((e): e is NonNullable<typeof e> => e !== null);
+  // Milestone 1 — a real `visit` event on the last-visit date (so the
+  // opportunity engine sees imported customers) plus the summary note.
+  const timeZone = getBusinessTimeZone(business);
+  const now = new Date();
+  const idByPhone = new Map((inserted ?? []).map((i) => [i.phone as string, i.id as string]));
+  const events = toInsert.flatMap((row) => {
+    const customerId = idByPhone.get(row.phone);
+    if (!customerId) return [];
+    const lastVisit = row.lastVisit && /^\d{4}-\d{2}-\d{2}$/.test(row.lastVisit) ? row.lastVisit : null;
+    return buildImportedEvents(
+      customerId,
+      {
+        lastVisit,
+        service: row.service?.slice(0, 100) ?? null,
+        totalSpent: row.totalSpent,
+        visitCount: row.visitCount,
+      },
+      timeZone,
+      now
+    ).map((e) => ({ ...e, business_id: business.id }));
+  });
 
   if (events.length > 0) {
-    await supabase.from("customer_events").insert(events);
+    const { error: eventsError } = await supabase.from("customer_events").insert(events);
+    if (eventsError) {
+      // Customers were saved; only their history didn't. Say so rather
+      // than reporting a clean import.
+      console.error("[import] Failed to save imported visit history.", eventsError.message);
+      return {
+        insertedCount: inserted?.length ?? 0,
+        failed: skipped,
+        error: "Customers were imported, but their last-visit history couldn't be saved. Add visits manually or contact support.",
+      };
+    }
   }
 
   revalidatePath("/customers");

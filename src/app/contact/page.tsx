@@ -1,7 +1,7 @@
 import { SiteNavbar } from "@/components/marketing/site-navbar";
 import { SiteFooter } from "@/components/marketing/site-footer";
 
-export const metadata = { title: "Contact — Reelo" };
+export const metadata = { title: "Contact — Accelio" };
 
 /** PLACEHOLDER — real contact details aren't set up yet; wire this up
  * from the admin panel/CMS later instead of inventing contact info here. */

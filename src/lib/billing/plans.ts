@@ -75,7 +75,7 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
   free: {
     id: "free",
     name: "Free",
-    tagline: "Start using Reelo and see how it works for your business.",
+    tagline: "Start using Accelio and see how it works for your business.",
     priceInPaise: 0,
     currency: "INR",
     billingPeriod: "monthly",
@@ -170,7 +170,7 @@ export function isPaidPlanId(value: PlanId): value is "starter" | "growth" {
 }
 
 /** Formats a paise amount as a rupee price string for display, e.g.
- * `priceInPaise: 69900` -> "₹699". Reelo's plans are always whole-rupee
+ * `priceInPaise: 69900` -> "₹699". Accelio's plans are always whole-rupee
  * amounts, so this never needs to show paise. Free's `priceInPaise` is 0;
  * callers wanting the "₹0 forever" pricing-page copy handle that
  * separately rather than through this generic formatter. */

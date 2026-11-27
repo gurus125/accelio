@@ -30,6 +30,19 @@ export async function getWhatsAppConnection(
   return data as WhatsAppConnectionRow | null;
 }
 
+/** Milestone 1 — the connection only if it is actually CONNECTED with a
+ * phone number id. Every automated send path uses this, so a business
+ * whose connection errored (or lost its number to its real owner, see
+ * migration 0019) can never send through a stale phone_number_id. */
+export async function getActiveWhatsAppConnection(
+  businessId: string,
+  supabase: SupabaseClient = createClient()
+): Promise<(WhatsAppConnectionRow & { phone_number_id: string }) | null> {
+  const connection = await getWhatsAppConnection(businessId, supabase);
+  if (!connection || connection.connection_status !== "connected" || !connection.phone_number_id) return null;
+  return connection as WhatsAppConnectionRow & { phone_number_id: string };
+}
+
 export async function listMessagesForCustomer(customerId: string): Promise<MessageRow[]> {
   const supabase = createClient();
   const { data, error } = await supabase
@@ -413,7 +426,7 @@ export async function listRecentCommunicationForBusiness(
 
 /** Inbound messages that couldn't be matched to any known customer —
  * surfaced on the Activity page so the owner can explicitly add them as a
- * customer rather than Reelo silently creating one. */
+ * customer rather than Accelio silently creating one. */
 export async function listUnknownSendersForBusiness(businessId: string): Promise<CustomerMessageRow[]> {
   const supabase = createClient();
   const { data, error } = await supabase

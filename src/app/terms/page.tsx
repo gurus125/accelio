@@ -1,7 +1,7 @@
 import { SiteNavbar } from "@/components/marketing/site-navbar";
 import { SiteFooter } from "@/components/marketing/site-footer";
 
-export const metadata = { title: "Terms of Service — Reelo" };
+export const metadata = { title: "Terms of Service — Accelio" };
 
 /** PLACEHOLDER — real terms need legal review before publishing; wire
  * this up from the admin panel/CMS once that's ready rather than

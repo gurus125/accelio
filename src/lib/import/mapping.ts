@@ -1,10 +1,11 @@
-import type { ColumnMapping, ReeloField } from "@/types/import";
+import type { ColumnMapping, AccelioField } from "@/types/import";
 
-const FIELD_SYNONYMS: Record<ReeloField, string[]> = {
+const FIELD_SYNONYMS: Record<AccelioField, string[]> = {
   name: ["name", "customer name", "full name", "customer"],
   phone: ["phone", "phone number", "mobile", "mobile number", "contact number", "contact"],
   email: ["email", "email address", "e-mail"],
-  lastVisit: ["last visit", "last service", "last purchase", "lastvisit", "last visit date"],
+  lastVisit: ["last visit", "last purchase", "lastvisit", "last visit date", "last visit on"],
+  service: ["service", "last service", "services", "service name", "treatment", "last treatment"],
   totalSpent: ["amount", "total spent", "lifetime value", "totalspent", "total amount", "spent"],
   visitCount: ["visit count", "visits", "total visits", "visitcount", "number of visits"],
   notes: ["notes", "note", "comment", "comments", "remarks"],
@@ -14,13 +15,13 @@ const FIELD_SYNONYMS: Record<ReeloField, string[]> = {
  * names. Always overridable by the user — nothing here is final. */
 export function suggestMapping(headers: string[]): ColumnMapping {
   const mapping: ColumnMapping = {};
-  const used = new Set<ReeloField>();
+  const used = new Set<AccelioField>();
 
   for (const header of headers) {
     const normalized = header.trim().toLowerCase();
-    let matched: ReeloField | null = null;
+    let matched: AccelioField | null = null;
 
-    for (const [field, synonyms] of Object.entries(FIELD_SYNONYMS) as [ReeloField, string[]][]) {
+    for (const [field, synonyms] of Object.entries(FIELD_SYNONYMS) as [AccelioField, string[]][]) {
       if (used.has(field)) continue;
       if (synonyms.includes(normalized)) {
         matched = field;
@@ -35,7 +36,7 @@ export function suggestMapping(headers: string[]): ColumnMapping {
   return mapping;
 }
 
-export function mappedField(mapping: ColumnMapping, field: ReeloField): string | null {
+export function mappedField(mapping: ColumnMapping, field: AccelioField): string | null {
   for (const [header, mapped] of Object.entries(mapping)) {
     if (mapped === field) return header;
   }

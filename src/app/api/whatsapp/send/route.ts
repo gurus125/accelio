@@ -4,6 +4,7 @@ import { getBusinessForCurrentUser } from "@/lib/business/queries";
 import { getCustomer } from "@/lib/customers/queries";
 import { getLead, markLeadContacted } from "@/lib/leads/queries";
 import { normalizePhoneForWhatsApp } from "@/lib/whatsapp/phone";
+import { checkCustomerConsent } from "@/lib/consent";
 import { isWhatsAppEnvConfigured } from "@/lib/whatsapp/config";
 import {
   getWhatsAppConnection,
@@ -94,6 +95,11 @@ export async function POST(request: Request) {
       if (!customer) {
         return NextResponse.json({ ok: false, error: "Customer not found." }, { status: 404 });
       }
+      // Milestone 1 — never message someone who opted out or never agreed.
+      const consent = checkCustomerConsent(customer);
+      if (!consent.allowed) {
+        return NextResponse.json({ ok: false, error: consent.message }, { status: 403 });
+      }
       recipientName = customer.name;
       recipientPhone = customer.phone;
     } else {
@@ -103,6 +109,12 @@ export async function POST(request: Request) {
       }
       if (!lead.phone) {
         return NextResponse.json({ ok: false, error: "This lead doesn't have a phone number on file." }, { status: 400 });
+      }
+      if (lead.opted_out_at) {
+        return NextResponse.json(
+          { ok: false, error: "This lead replied STOP and opted out of WhatsApp messages." },
+          { status: 403 }
+        );
       }
       recipientName = lead.name || "there";
       recipientPhone = lead.phone;

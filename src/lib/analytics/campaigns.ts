@@ -11,6 +11,7 @@
  */
 
 import { createClient } from "@/lib/supabase/server";
+import { chunk, fetchAllPages } from "@/lib/supabase/paginate";
 import { listRecipients } from "@/lib/campaigns/queries";
 import type { CampaignRow } from "@/lib/campaigns/types";
 import { computeCustomerReactivation, isQualifyingOutreachStatus } from "./reactivation";
@@ -49,25 +50,31 @@ export async function getCampaignAnalytics(businessId: string, campaign: Campaig
   const messageIds = recipients.map((r) => r.message_id).filter((id): id is string => id !== null);
   const customerIds = [...new Set(recipients.map((r) => r.customer_id))];
 
-  const [messagesResult, eventsResult] = await Promise.all([
-    messageIds.length > 0
-      ? supabase.from("messages").select("id, customer_id, status, sent_at").in("id", messageIds)
-      : Promise.resolve({ data: [] as MessageRow[], error: null }),
+  // Chunked `.in()` lookups (every id goes in the request URL) and
+  // paginated visit history, so big campaigns aren't cut off at 1,000 rows.
+  const recipientCustomers = new Set(customerIds);
+  const [messages, events] = await Promise.all([
+    (async () => {
+      const out: MessageRow[] = [];
+      for (const ids of chunk(messageIds, 150)) {
+        const { data, error } = await supabase.from("messages").select("id, customer_id, status, sent_at").in("id", ids);
+        if (error) throw new Error(error.message);
+        out.push(...((data ?? []) as MessageRow[]));
+      }
+      return out;
+    })(),
     customerIds.length > 0
-      ? supabase
-          .from("customer_events")
-          .select("customer_id, occurred_at, amount")
-          .eq("business_id", businessId)
-          .eq("event_type", "visit")
-          .in("customer_id", customerIds)
-      : Promise.resolve({ data: [] as VisitRow[], error: null }),
+      ? fetchAllPages<VisitRow>((from, to) =>
+          supabase
+            .from("customer_events")
+            .select("customer_id, occurred_at, amount")
+            .eq("business_id", businessId)
+            .eq("event_type", "visit")
+            .order("id")
+            .range(from, to)
+        ).then((rows) => rows.filter((e) => recipientCustomers.has(e.customer_id)))
+      : Promise.resolve([] as VisitRow[]),
   ]);
-
-  if (messagesResult.error) throw new Error(messagesResult.error.message);
-  if (eventsResult.error) throw new Error(eventsResult.error.message);
-
-  const messages = (messagesResult.data ?? []) as MessageRow[];
-  const events = (eventsResult.data ?? []) as VisitRow[];
 
   const qualifying = messages.filter((m) => isQualifyingOutreachStatus(m.status) && m.sent_at);
   const sent = qualifying.length;

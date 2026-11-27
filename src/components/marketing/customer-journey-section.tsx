@@ -6,7 +6,7 @@ const JOURNEY = [
   { icon: Globe, label: "Website visitor" },
   { icon: UserPlus, label: "Lead" },
   { icon: Users, label: "Customer" },
-  { icon: Sparkles, label: "Reelo recommendation" },
+  { icon: Sparkles, label: "Accelio recommendation" },
   { icon: MessageCircle, label: "WhatsApp" },
   { icon: Repeat, label: "Repeat visit" },
   { icon: Heart, label: "Loyal customer" },
@@ -18,7 +18,7 @@ export function CustomerJourneySection() {
       <div className="container py-16 sm:py-20">
         <SectionHeading
           heading="From lead to repeat customer."
-          subheading="Reelo helps you capture interest, manage customer activity, identify opportunities, and bring customers back."
+          subheading="Accelio helps you capture interest, manage customer activity, identify opportunities, and bring customers back."
         />
         <Reveal className="mx-auto mt-12 max-w-5xl overflow-x-auto">
           <div className="flex min-w-max items-center justify-center gap-2 sm:min-w-0 sm:flex-wrap sm:gap-3">

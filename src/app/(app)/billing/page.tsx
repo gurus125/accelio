@@ -132,7 +132,7 @@ export default async function BillingPage() {
             <p className="text-sm font-medium text-danger-700">Your subscription has ended.</p>
             <p className="mt-1 text-sm text-muted-foreground">
               Your data is safe and nothing has been deleted. Choose a plan below to continue — or pick Free to keep
-              using Reelo at no cost, with no time limit.
+              using Accelio at no cost, with no time limit.
             </p>
           </Card>
         )}

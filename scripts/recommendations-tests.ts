@@ -137,6 +137,11 @@ function makeCustomer(overrides: Partial<CustomerRow>): CustomerRow {
     status: "active",
     tags: [],
     notes: null,
+    // Milestone 1 — a customer who agreed to WhatsApp messages.
+    whatsapp_consent: true,
+    consent_source: "manual",
+    consent_at: iso(daysAgo(400)),
+    opted_out_at: null,
     created_at: iso(daysAgo(400)),
     updated_at: iso(daysAgo(400)),
     ...overrides,
@@ -435,7 +440,7 @@ function inboundEntry(timestamp: Date): TimelineEntry {
 
 // 19. Brand-new customer, first visit, NO configured baseline and no
 // recognizable built-in default (unrecognized service, excluded business
-// type) -> Reelo must NOT manufacture an opportunity.
+// type) -> Accelio must NOT manufacture an opportunity.
 {
   const customer = makeCustomer({ id: "cust-boutique-1" });
   const events = [visitEvent("cust-boutique-1", daysAgo(60), 500, "Bespoke Tailoring Consultation")];

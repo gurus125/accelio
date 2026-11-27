@@ -1,3 +1,5 @@
+import type { ConsentSource } from "@/lib/consent";
+import type { DerivedCustomerStatus } from "@/lib/customers/status";
 /**
  * Row shapes for the Phase 4 Supabase tables. These mirror
  * `supabase/migrations/0001_phase4_core_schema.sql` exactly — if a column
@@ -19,6 +21,10 @@ export interface BusinessRow {
    * business, regardless of each automation's own status. Never cleared
    * automatically. */
   automations_paused_at: string | null;
+  /** Milestone 1 — IANA zone for every "today"/date/hour decision
+   * (migration 0017). Defaults to Asia/Kolkata; read it via
+   * `getBusinessTimeZone()` so a missing/invalid value falls back safely. */
+  timezone?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -28,9 +34,16 @@ export interface CustomerRow {
   business_id: string;
   name: string;
   phone: string;
+  /** Deprecated (Milestone 1): the old manual status. No longer written or
+   * shown — use the engine-derived status (src/lib/customers/status.ts). */
   status: CustomerStatus;
   tags: string[];
   notes: string | null;
+  /** Milestone 1 (migration 0018) — see src/lib/consent.ts. */
+  whatsapp_consent: boolean;
+  consent_source: ConsentSource | null;
+  consent_at: string | null;
+  opted_out_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -58,6 +71,10 @@ export interface RealCustomer extends CustomerRow {
   visitCount: number;
   totalSpent: number;
   lastVisitAt: string | null;
+  /** Milestone 1 — computed by the opportunity engine (see
+   * src/lib/customers/status.ts); `status` (the old manual column) is no
+   * longer shown or edited anywhere. */
+  derivedStatus: DerivedCustomerStatus;
 }
 
 /** Phase 13 — a person who has voluntarily expressed interest via a
@@ -91,6 +108,8 @@ export interface LeadRow {
   consent_status: LeadConsentStatus | null;
   consent_text: string | null;
   consent_given_at: string | null;
+  /** Milestone 1 — set when the lead replies STOP on WhatsApp. */
+  opted_out_at?: string | null;
   captured_at: string;
   last_contacted_at: string | null;
   converted_at: string | null;

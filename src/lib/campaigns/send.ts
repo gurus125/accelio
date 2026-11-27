@@ -96,6 +96,13 @@ export async function sendCampaignMessages(
           return;
         }
 
+        // Milestone 1 — consent is re-checked at send time: a customer
+        // may have replied STOP after being added to the audience.
+        if (!recipient.customerCanMessage) {
+          await supabase.from("campaign_recipients").update({ status: "skipped" }).eq("id", recipient.id);
+          return;
+        }
+
         const normalizedPhone = normalizePhoneForWhatsApp(recipient.customerPhone);
         if (!normalizedPhone) {
           await supabase.from("campaign_recipients").update({ status: "failed" }).eq("id", recipient.id);

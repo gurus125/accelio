@@ -1,3 +1,4 @@
+import type { CustomerConsentFields } from "@/lib/consent";
 /**
  * Phase 14 — types for the controlled automation engine. An "automation" is
  * deliberately narrow: TRIGGER + ELIGIBILITY + ACTION + OPTIONAL DELAY +
@@ -86,12 +87,17 @@ export interface AutomationCandidate {
   /** The phone number to send to, already whatever this business/customer
    * has on file (may still fail normalization later). */
   phone: string | null;
+  /** Milestone 1 — the customer's WhatsApp consent as stored. Required for
+   * customer candidates; a missing value fails closed (no send). */
+  customerConsent?: CustomerConsentFields;
 }
 
 export type EligibilityFailureReason =
   | "no_phone"
   | "invalid_phone"
   | "consent_unclear"
+  | "opted_out"
+  | "no_consent"
   | "recently_contacted"
   | "conflicting_active_message"
   | "unanswered_reply"

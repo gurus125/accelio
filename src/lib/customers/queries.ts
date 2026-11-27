@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import type { CustomerEventRow, CustomerRow } from "@/types/database";
+import { fetchAllPages } from "@/lib/supabase/paginate";
 
 /**
  * All of these take a `businessId` and filter by it explicitly — that's a
@@ -21,27 +22,27 @@ export async function listCustomers(
   businessId: string,
   supabase: SupabaseClient = createClient()
 ): Promise<CustomerRow[]> {
-  const { data, error } = await supabase
-    .from("customers")
-    .select("*")
-    .eq("business_id", businessId)
-    .order("created_at", { ascending: false });
-
-  if (error) throw new Error(error.message);
-  return (data ?? []) as CustomerRow[];
+  // Paged past Supabase's silent 1,000-row cap.
+  return fetchAllPages<CustomerRow>((from, to) =>
+    supabase
+      .from("customers")
+      .select("*")
+      .eq("business_id", businessId)
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: true })
+      .range(from, to)
+  );
 }
 
 export async function listEventsForBusiness(
   businessId: string,
   supabase: SupabaseClient = createClient()
 ): Promise<CustomerEventRow[]> {
-  const { data, error } = await supabase
-    .from("customer_events")
-    .select("*")
-    .eq("business_id", businessId);
-
-  if (error) throw new Error(error.message);
-  return (data ?? []) as CustomerEventRow[];
+  // Paged past Supabase's silent 1,000-row cap — the opportunity engine
+  // needs every visit, not the first 1,000.
+  return fetchAllPages<CustomerEventRow>((from, to) =>
+    supabase.from("customer_events").select("*").eq("business_id", businessId).order("id").range(from, to)
+  );
 }
 
 export async function getCustomer(businessId: string, customerId: string): Promise<CustomerRow | null> {
@@ -67,4 +68,37 @@ export async function listEventsForCustomer(customerId: string): Promise<Custome
 
   if (error) throw new Error(error.message);
   return (data ?? []) as CustomerEventRow[];
+}
+
+export interface CustomerPhoneIssue {
+  customer_id: string;
+  name: string;
+  phone: string;
+  normalized_phone: string | null;
+  issue: "duplicate" | "invalid_phone";
+}
+
+/** Milestone 1 — the duplicate/invalid-phone report from the
+ * `customer_phone_issues` view (migration 0016). Report only: nothing is
+ * merged automatically; the owner opens each customer and decides. */
+export async function listCustomerPhoneIssues(
+  businessId: string,
+  supabase: SupabaseClient = createClient()
+): Promise<CustomerPhoneIssue[]> {
+  const { data, error } = await supabase
+    .from("customer_phone_issues")
+    .select("customer_id, name, phone, normalized_phone, issue")
+    .eq("business_id", businessId)
+    .order("issue")
+    .order("normalized_phone")
+    .order("created_at")
+    .limit(200);
+
+  if (error) {
+    // The view only exists once migration 0016 is applied — never break the
+    // customers page because of a missing report.
+    console.error("[customers/queries] Couldn't load phone issues report.", error.message);
+    return [];
+  }
+  return (data ?? []) as CustomerPhoneIssue[];
 }

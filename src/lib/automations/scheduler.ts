@@ -13,6 +13,7 @@ import { listActiveAutomationsAcrossAllBusinesses } from "./queries";
 import { runAutomationOnce } from "./executor";
 import type { AutomationRow, AutomationRunOutcome } from "./types";
 import type { BusinessRow } from "@/types/database";
+import { chunk } from "@/lib/supabase/paginate";
 
 export interface SchedulerTickResult {
   automationId: string;
@@ -32,10 +33,13 @@ export async function runSchedulerTick(supabase: SupabaseClient, now: Date = new
   if (automations.length === 0) return [];
 
   const businessIds = Array.from(new Set(automations.map((a) => a.business_id)));
-  const { data: businesses, error } = await supabase.from("businesses").select("*").in("id", businessIds);
-  if (error) throw new Error(error.message);
-
-  const businessById = new Map<string, BusinessRow>((businesses ?? []).map((b: BusinessRow) => [b.id, b]));
+  // Chunked: `.in()` puts every id in the request URL.
+  const businessById = new Map<string, BusinessRow>();
+  for (const ids of chunk(businessIds, 150)) {
+    const { data: businesses, error } = await supabase.from("businesses").select("*").in("id", ids);
+    if (error) throw new Error(error.message);
+    for (const b of (businesses ?? []) as BusinessRow[]) businessById.set(b.id, b);
+  }
 
   const results: SchedulerTickResult[] = [];
 

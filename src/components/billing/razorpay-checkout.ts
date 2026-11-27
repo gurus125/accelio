@@ -63,7 +63,7 @@ export async function openRazorpayCheckout(params: {
   const checkout = new window.Razorpay({
     key: params.razorpayKeyId,
     subscription_id: params.razorpaySubscriptionId,
-    name: "Reelo",
+    name: "Accelio",
     description: `${params.planName} plan`,
     theme: { color: "#4f46e5" },
     handler: params.onSuccess,

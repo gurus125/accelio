@@ -1,4 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
+import { chunk, fetchAllPages } from "@/lib/supabase/paginate";
+import { canMessageCustomer } from "@/lib/consent";
+import type { CustomerRow } from "@/types/database";
 import type { CampaignRecipientRow, CampaignRecipientWithCustomer, CampaignResultCounts, CampaignRow } from "./types";
 
 export async function listCampaignsForBusiness(businessId: string): Promise<CampaignRow[]> {
@@ -28,14 +31,15 @@ export async function getCampaign(businessId: string, campaignId: string): Promi
 
 export async function listRecipients(campaignId: string): Promise<CampaignRecipientRow[]> {
   const supabase = createClient();
-  const { data, error } = await supabase
-    .from("campaign_recipients")
-    .select("*")
-    .eq("campaign_id", campaignId)
-    .order("created_at", { ascending: true });
-
-  if (error) throw new Error(error.message);
-  return (data ?? []) as CampaignRecipientRow[];
+  return fetchAllPages<CampaignRecipientRow>((from, to) =>
+    supabase
+      .from("campaign_recipients")
+      .select("*")
+      .eq("campaign_id", campaignId)
+      .order("created_at", { ascending: true })
+      .order("id", { ascending: true })
+      .range(from, to)
+  );
 }
 
 /** Recipients joined with just customer name/phone, for the audience
@@ -44,30 +48,30 @@ export async function listRecipients(campaignId: string): Promise<CampaignRecipi
  * (see `lib/whatsapp/queries.ts`'s summary/feed queries). */
 export async function listRecipientsWithCustomers(campaignId: string): Promise<CampaignRecipientWithCustomer[]> {
   const supabase = createClient();
-  const { data: recipients, error } = await supabase
-    .from("campaign_recipients")
-    .select("*")
-    .eq("campaign_id", campaignId)
-    .order("created_at", { ascending: true });
-
-  if (error) throw new Error(error.message);
-  const rows = (recipients ?? []) as CampaignRecipientRow[];
+  const rows = await listRecipients(campaignId);
   if (rows.length === 0) return [];
 
-  const customerIds = rows.map((r) => r.customer_id);
-  const { data: customers, error: customersError } = await supabase
-    .from("customers")
-    .select("id, name, phone")
-    .in("id", customerIds);
+  type RecipientCustomer = Pick<CustomerRow, "id" | "name" | "phone" | "whatsapp_consent" | "opted_out_at">;
+  const customerById = new Map<string, RecipientCustomer>();
+  // Chunked: `.in()` puts every id in the request URL.
+  for (const ids of chunk(Array.from(new Set(rows.map((r) => r.customer_id))), 150)) {
+    const { data: customers, error: customersError } = await supabase
+      .from("customers")
+      .select("id, name, phone, whatsapp_consent, opted_out_at")
+      .in("id", ids);
+    if (customersError) throw new Error(customersError.message);
+    for (const c of (customers ?? []) as RecipientCustomer[]) customerById.set(c.id, c);
+  }
 
-  if (customersError) throw new Error(customersError.message);
-  const customerById = new Map(((customers ?? []) as { id: string; name: string; phone: string }[]).map((c) => [c.id, c]));
-
-  return rows.map((row) => ({
-    ...row,
-    customerName: customerById.get(row.customer_id)?.name ?? "Unknown customer",
-    customerPhone: customerById.get(row.customer_id)?.phone ?? "",
-  }));
+  return rows.map((row) => {
+    const customer = customerById.get(row.customer_id);
+    return {
+      ...row,
+      customerName: customer?.name ?? "Unknown customer",
+      customerPhone: customer?.phone ?? "",
+      customerCanMessage: customer ? canMessageCustomer(customer) : false,
+    };
+  });
 }
 
 export async function getCampaignResultCounts(campaignId: string): Promise<CampaignResultCounts> {

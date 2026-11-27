@@ -1,5 +1,5 @@
 /**
- * Authenticated, RLS-scoped lead queries — for the Reelo dashboard only.
+ * Authenticated, RLS-scoped lead queries — for the Accelio dashboard only.
  * The public capture path never uses these (see `capture.ts`, which uses
  * the service-role admin client instead, the same split Phase 9's webhook
  * already established).
@@ -8,6 +8,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import type { LeadRow, LeadStatus, LeadWidgetRow } from "@/types/database";
+import { fetchAllPages } from "@/lib/supabase/paginate";
 
 export interface LeadCounts {
   new: number;
@@ -22,14 +23,15 @@ export async function listLeadsForBusiness(
   businessId: string,
   supabase: SupabaseClient = createClient()
 ): Promise<LeadRow[]> {
-  const { data, error } = await supabase
-    .from("leads")
-    .select("*")
-    .eq("business_id", businessId)
-    .order("captured_at", { ascending: false });
-
-  if (error) throw new Error(error.message);
-  return (data ?? []) as LeadRow[];
+  return fetchAllPages<LeadRow>((from, to) =>
+    supabase
+      .from("leads")
+      .select("*")
+      .eq("business_id", businessId)
+      .order("captured_at", { ascending: false })
+      .order("id", { ascending: true })
+      .range(from, to)
+  );
 }
 
 export async function getLead(

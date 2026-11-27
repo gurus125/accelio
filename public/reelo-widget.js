@@ -1,5 +1,5 @@
 /**
- * Reelo website lead-capture widget (Phase 13).
+ * Accelio website lead-capture widget (Phase 13).
  *
  * Embedded with: <script src=".../reelo-widget.js" data-widget="KEY" async></script>
  *
@@ -23,7 +23,7 @@
 
   // Derive the API origin from where this script itself was loaded from,
   // so the same snippet works whether the business copies it from a
-  // staging or production Reelo instance — never hardcoded.
+  // staging or production Accelio instance — never hardcoded.
   var scriptUrl = new URL(currentScript.src, window.location.href);
   var apiOrigin = scriptUrl.origin;
 

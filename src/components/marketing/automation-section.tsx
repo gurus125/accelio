@@ -34,8 +34,8 @@ export function AutomationSection() {
     <section className="border-b border-border/80">
       <div className="container py-16 sm:py-20">
         <SectionHeading
-          heading="Let Reelo handle the routine follow-ups."
-          subheading="Set up routine workflows once and keep control over what Reelo sends."
+          heading="Let Accelio handle the routine follow-ups."
+          subheading="Set up routine workflows once and keep control over what Accelio sends."
         />
         <Reveal className="mx-auto mt-12 grid max-w-4xl gap-4 sm:grid-cols-2">
           {AUTOMATIONS.map((item) => (

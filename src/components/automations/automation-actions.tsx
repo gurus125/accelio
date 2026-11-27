@@ -112,15 +112,15 @@ export function AutomationActions({ automation }: { automation: AutomationRow })
         open={confirmingActivate}
         onClose={() => setConfirmingActivate(false)}
         title="Turn this automation on?"
-        description="Reelo will start acting on it automatically from now on."
+        description="Accelio will start acting on it automatically from now on."
       >
         <div className="space-y-4">
           <ul className="space-y-1.5 text-sm text-muted-foreground">
             <li>
-              You&apos;re enabling automatic WhatsApp follow-ups. Reelo will only contact eligible customers or leads
+              You&apos;re enabling automatic WhatsApp follow-ups. Accelio will only contact eligible customers or leads
               and will respect your communication rules, cooldowns and daily limits.
             </li>
-            <li>- If someone replies, you&apos;ll be told to follow up yourself — Reelo never auto-replies.</li>
+            <li>- If someone replies, you&apos;ll be told to follow up yourself — Accelio never auto-replies.</li>
             <li>- You can pause this any time, or stop everything at once from Settings -&gt; Automations.</li>
           </ul>
           <div className="flex gap-2">

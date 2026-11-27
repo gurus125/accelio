@@ -102,7 +102,7 @@ export function RealOpportunitiesContent({ opportunities, hasEvaluableCustomers 
           }
           description={
             !hasEvaluableCustomers
-              ? "Once your customers have a few logged visits, Reelo can start spotting who's worth contacting."
+              ? "Once your customers have a few logged visits, Accelio can start spotting who's worth contacting."
               : opportunities.length === 0
                 ? "Nothing stands out today — check back after customers' next visits, or as more history builds up."
                 : "Try a different filter, or check back after your customers' next visits."

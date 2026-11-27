@@ -8,13 +8,14 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { normalizePhoneForWhatsApp } from "@/lib/whatsapp/phone";
-import { getWhatsAppConnection, findRecentDuplicateMessage } from "@/lib/whatsapp/queries";
+import { checkCustomerConsent } from "@/lib/consent";
+import { DEFAULT_BUSINESS_TIMEZONE, getZonedParts } from "@/lib/dates";
+import { getActiveWhatsAppConnection, findRecentDuplicateMessage } from "@/lib/whatsapp/queries";
 import { isEligibleToday, type OutreachContext } from "@/lib/recommendations/filters";
 import type { LeadRow } from "@/types/database";
 import {
   AUTOMATION_BUSINESS_HOURS_END_HOUR,
   AUTOMATION_BUSINESS_HOURS_START_HOUR,
-  ASSUMED_BUSINESS_TIMEZONE,
   MAX_AUTOMATED_MESSAGES_PER_BUSINESS_PER_DAY,
   MAX_AUTOMATED_MESSAGES_PER_CUSTOMER_PER_30_DAYS,
 } from "./constants";
@@ -22,18 +23,13 @@ import type { AutomationCandidate, AutomationRow, EligibilityResult } from "./ty
 
 /**
  * Whether `now` falls inside the configured business-hours window, in the
- * assumed business timezone (spec step 22). Never sends outside this
+ * business's own time zone (spec step 22; Milestone 1 makes the zone a
+ * per-business setting, default Asia/Kolkata). Never sends outside this
  * window — a candidate outside it is simply deferred to a later tick, not
  * queued anywhere special (see the executor's comment on why that's safe).
  */
-export function isWithinBusinessHours(now: Date = new Date()): boolean {
-  const hourInBusinessTz = Number(
-    new Intl.DateTimeFormat("en-US", {
-      timeZone: ASSUMED_BUSINESS_TIMEZONE,
-      hour: "numeric",
-      hour12: false,
-    }).format(now)
-  );
+export function isWithinBusinessHours(now: Date = new Date(), timeZone: string = DEFAULT_BUSINESS_TIMEZONE): boolean {
+  const hourInBusinessTz = getZonedParts(now, timeZone).hour;
   return hourInBusinessTz >= AUTOMATION_BUSINESS_HOURS_START_HOUR && hourInBusinessTz < AUTOMATION_BUSINESS_HOURS_END_HOUR;
 }
 
@@ -57,13 +53,21 @@ export function hasDelayElapsed(candidate: AutomationCandidate, delayMinutes: nu
   return elapsedMs >= delayMinutes * 60_000;
 }
 
-/** Lead consent gate (spec step 13): only a lead whose Phase 13 consent
- * checkbox was recorded as given may be automatically messaged. Anything
- * else (not recorded, or no lead at all — i.e. an existing customer, whose
- * relationship already implies requested communication) does not block a
- * customer-based automation, but DOES block a lead-based one. */
-export function hasSufficientConsent(lead: LeadRow | null): EligibilityResult {
+/** Consent gate (spec step 13). Leads: only a lead whose Phase 13 consent
+ * checkbox was recorded as given, and who hasn't replied STOP, may be
+ * automatically messaged. Customers (Milestone 1): only with recorded
+ * WhatsApp consent and no opt-out — see src/lib/consent.ts. */
+export function hasSufficientConsent(lead: LeadRow | null, candidate?: AutomationCandidate): EligibilityResult {
+  // Milestone 1 — customers need recorded consent and no opt-out. A
+  // customer candidate without consent data fails closed.
+  if (candidate?.customerId) {
+    const check = checkCustomerConsent(candidate.customerConsent ?? {});
+    if (!check.allowed) return { eligible: false, reason: check.reason, detail: check.message };
+  }
   if (!lead) return { eligible: true };
+  if (lead.opted_out_at) {
+    return { eligible: false, reason: "opted_out", detail: "This lead replied STOP and opted out of WhatsApp messages." };
+  }
   if (lead.consent_status === "given") return { eligible: true };
   return {
     eligible: false,
@@ -82,6 +86,8 @@ export interface EligibilityCheckParams {
   monthlyCountForCustomerOrLead: number;
   now: Date;
   supabase: SupabaseClient;
+  /** The business's IANA zone (see `getBusinessTimeZone`). */
+  timeZone?: string;
 }
 
 /**
@@ -114,14 +120,14 @@ export async function checkCandidateEligibility(params: EligibilityCheckParams):
     return { eligible: false, reason: "invalid_phone", detail: "Phone number couldn't be confirmed as valid." };
   }
 
-  const consent = hasSufficientConsent(lead);
+  const consent = hasSufficientConsent(lead, candidate);
   if (!consent.eligible) return consent;
 
   if (!hasDelayElapsed(candidate, automation.delay_minutes, now)) {
     return { eligible: false, reason: "delay_not_elapsed", detail: "Still waiting out the configured delay." };
   }
 
-  if (!isWithinBusinessHours(now)) {
+  if (!isWithinBusinessHours(now, params.timeZone ?? DEFAULT_BUSINESS_TIMEZONE)) {
     return {
       eligible: false,
       reason: "outside_business_hours",
@@ -169,7 +175,7 @@ export async function checkCandidateEligibility(params: EligibilityCheckParams):
       return { eligible: false, reason: "missing_template", detail: "No approved message is set up yet." };
     }
 
-    const connection = await getWhatsAppConnection(automation.business_id, params.supabase);
+    const connection = await getActiveWhatsAppConnection(automation.business_id, params.supabase);
     if (!connection) {
       return { eligible: false, reason: "whatsapp_not_connected", detail: "WhatsApp isn't connected yet." };
     }

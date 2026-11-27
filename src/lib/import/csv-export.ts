@@ -44,5 +44,5 @@ export function downloadSampleTemplate() {
     ["Rahul Sharma", "9876543210", "rahul@example.com", "2026-06-01", 4800, 8, "Regular customer"],
     ["Priya Verma", "9821345678", "priya@example.com", "2026-07-10", 7200, 12, "High-value customer"],
   ];
-  downloadCsv("reelo-customer-import-template.csv", toCsv(headers, rows));
+  downloadCsv("accelio-customer-import-template.csv", toCsv(headers, rows));
 }

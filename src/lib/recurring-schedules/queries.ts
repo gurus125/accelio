@@ -16,6 +16,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { listCustomers } from "@/lib/customers/queries";
 import type { CustomerRow, RecurringScheduleRow } from "@/types/database";
+import { fetchAllPages } from "@/lib/supabase/paginate";
+import { DEFAULT_BUSINESS_TIMEZONE, businessDateKey, daysInMonth, parseDateKey, toDateKey, type DateKey } from "@/lib/dates";
 
 export async function listRecurringSchedulesForCustomer(
   businessId: string,
@@ -92,62 +94,57 @@ export async function deleteRecurringSchedule(
   if (error) throw new Error(error.message);
 }
 
-function clampDayToMonth(year: number, monthIndex: number, day: number): number {
-  const lastDayOfMonth = new Date(year, monthIndex + 1, 0).getDate();
-  return Math.min(day, lastDayOfMonth);
-}
-
-function addMonths(year: number, monthIndex: number, count: number): { year: number; monthIndex: number } {
-  let total = monthIndex + count;
-  let y = year;
-  while (total > 11) {
-    total -= 12;
-    y += 1;
-  }
-  while (total < 0) {
-    total += 12;
-    y -= 1;
-  }
-  return { year: y, monthIndex: total };
-}
-
 /**
  * The most recent monthly anniversary of `anchorDate` (strictly after the
  * anchor itself — the anchor date is when the customer joined, not a fee
- * due date) that has occurred at or before `now`. `null` when the very
- * first anniversary hasn't happened yet. Handles month-end anchors (e.g.
- * anchored on the 31st) by clamping to the last real day of a shorter
- * month, same as how a calendar app would.
+ * due date) whose calendar date has arrived in the business's time zone.
+ * `null` when the very first anniversary hasn't happened yet. Month-end
+ * anchors (e.g. the 31st) clamp to the last real day of a shorter month,
+ * same as a calendar app.
+ *
+ * Milestone 1: pure calendar math on "YYYY-MM-DD" dates plus the business
+ * zone — never the server's local time, which made this give different
+ * answers on a laptop in India and a server in UTC. Returns the
+ * anniversary as a Date at UTC midnight of that calendar date.
  */
-export function mostRecentAnniversary(anchorDate: Date, now: Date): Date | null {
-  const anchorDay = anchorDate.getDate();
-  let { year, monthIndex } = addMonths(anchorDate.getFullYear(), anchorDate.getMonth(), 1);
-  let candidate = new Date(year, monthIndex, clampDayToMonth(year, monthIndex, anchorDay));
-  if (candidate.getTime() > now.getTime()) return null;
+export function mostRecentAnniversary(
+  anchorDate: Date | string,
+  now: Date,
+  timeZone: string = DEFAULT_BUSINESS_TIMEZONE
+): Date | null {
+  const anchorKey = typeof anchorDate === "string" ? anchorDate.slice(0, 10) : anchorDate.toISOString().slice(0, 10);
+  const anchor = parseDateKey(anchorKey);
+  const todayKey = businessDateKey(now, timeZone);
 
-  // Advance one month at a time while the NEXT anniversary would still be
-  // due — schedules are created going forward in practice, so this loop is
-  // short, but it's correct even for a schedule whose anchor is far in the
-  // past (e.g. imported historical data).
-  // eslint-disable-next-line no-constant-condition
-  while (true) {
-    const next = addMonths(year, monthIndex, 1);
-    const nextCandidate = new Date(next.year, next.monthIndex, clampDayToMonth(next.year, next.monthIndex, anchorDay));
-    if (nextCandidate.getTime() > now.getTime()) break;
-    year = next.year;
-    monthIndex = next.monthIndex;
-    candidate = nextCandidate;
-  }
-  return candidate;
+  const anniversaryKey = (monthsAfter: number): DateKey => {
+    const totalMonths = anchor.month - 1 + monthsAfter;
+    const year = anchor.year + Math.floor(totalMonths / 12);
+    const month = (totalMonths % 12) + 1;
+    return toDateKey(year, month, Math.min(anchor.day, daysInMonth(year, month)));
+  };
+
+  if (anniversaryKey(1) > todayKey) return null;
+
+  // Jump close to today, then step — correct even for an anchor years back.
+  const today = parseDateKey(todayKey);
+  let k = Math.max(1, (today.year - anchor.year) * 12 + (today.month - anchor.month) - 1);
+  while (anniversaryKey(k) > todayKey) k -= 1;
+  while (anniversaryKey(k + 1) <= todayKey) k += 1;
+
+  const { year, month, day } = parseDateKey(anniversaryKey(k));
+  return new Date(Date.UTC(year, month - 1, day));
 }
 
 /** Stable per-period key ("2026-10") for the `automation_runs` uniqueness
  * guard — the same schedule fires at most once per period no matter how
  * many scheduler ticks land inside it. */
-export function periodKeyForRecurringSchedule(schedule: RecurringScheduleRow, now: Date): string {
-  const anniversary = mostRecentAnniversary(new Date(schedule.anchor_date), now);
-  const at = anniversary ?? now;
-  return `${at.getFullYear()}-${String(at.getMonth() + 1).padStart(2, "0")}`;
+export function periodKeyForRecurringSchedule(
+  schedule: RecurringScheduleRow,
+  now: Date,
+  timeZone: string = DEFAULT_BUSINESS_TIMEZONE
+): string {
+  const anniversary = mostRecentAnniversary(schedule.anchor_date, now, timeZone);
+  return (anniversary ? anniversary.toISOString() : businessDateKey(now, timeZone)).slice(0, 7);
 }
 
 /**
@@ -160,16 +157,18 @@ export function periodKeyForRecurringSchedule(schedule: RecurringScheduleRow, no
 export async function findDueRecurringSchedules(
   businessId: string,
   supabase: SupabaseClient,
-  now: Date = new Date()
+  now: Date = new Date(),
+  timeZone: string = DEFAULT_BUSINESS_TIMEZONE
 ): Promise<{ schedule: RecurringScheduleRow; customer: CustomerRow }[]> {
-  const { data, error } = await supabase
-    .from("recurring_schedules")
-    .select("*")
-    .eq("business_id", businessId)
-    .eq("status", "active");
-  if (error) throw new Error(error.message);
-
-  const schedules = (data ?? []) as RecurringScheduleRow[];
+  const schedules = await fetchAllPages<RecurringScheduleRow>((from, to) =>
+    supabase
+      .from("recurring_schedules")
+      .select("*")
+      .eq("business_id", businessId)
+      .eq("status", "active")
+      .order("id")
+      .range(from, to)
+  );
   if (schedules.length === 0) return [];
 
   const customers = await listCustomers(businessId, supabase);
@@ -177,7 +176,7 @@ export async function findDueRecurringSchedules(
 
   const due: { schedule: RecurringScheduleRow; customer: CustomerRow }[] = [];
   for (const schedule of schedules) {
-    const anniversary = mostRecentAnniversary(new Date(schedule.anchor_date), now);
+    const anniversary = mostRecentAnniversary(schedule.anchor_date, now, timeZone);
     if (!anniversary) continue;
     const customer = customerById.get(schedule.customer_id);
     if (!customer) continue;

@@ -1,4 +1,4 @@
-# Reelo
+# Accelio
 
 A customer marketing assistant for local businesses. This repo currently
 contains **Phase 1** (a frontend prototype on mock data), **Phase 2** (a
@@ -26,6 +26,30 @@ npm run dev
 ```
 
 Then open [http://localhost:3000](http://localhost:3000).
+
+## Milestone 1 — pilot blockers (what changed)
+
+- **Signup:** creating a business now also creates the owner's
+  `business_members` row (DB trigger), so new signups aren't locked out.
+- **Phones:** one normaliser (`src/lib/phone.ts`) stores every number as
+  `+91XXXXXXXXXX` — manual entry, import, leads, webhook, everything.
+  Customers → shows a report of possible duplicates / invalid numbers
+  (nothing is merged automatically).
+- **Import:** the last-visit date becomes a real `visit` event (plus an
+  optional "Last Service" column), so imported customers are flagged as due.
+- **Consent:** customers have `whatsapp_consent` / `consent_source` /
+  `consent_at` / `opted_out_at`. Replying STOP / UNSUBSCRIBE / बंद opts
+  out, START opts back in. Manual sends, campaigns, automations and
+  recommendations skip anyone opted out or without recorded consent.
+- **WhatsApp:** a `phone_number_id` can be connected to only one business.
+  `WHATSAPP_APP_SECRET` is **required** when `NODE_ENV=production`.
+- **Lists/analytics** page past Supabase's 1,000-row cap.
+- **Time zone:** `businesses.timezone` (default `Asia/Kolkata`) drives
+  "today", business hours, daily caps, recurring reminders and analytics.
+- **Status** shown for a customer is derived from the opportunity engine;
+  the manual dropdown is gone.
+
+Apply migrations `0015`–`0019` in order (SQL Editor or `supabase db push`).
 
 ## Environment variables
 
@@ -405,9 +429,9 @@ nothing persisted to the database.
 
 On the opportunity detail page (`/opportunities/[customerId]`), reached from
 the dashboard, `/opportunities`, or a customer's profile, the owner can now
-have Reelo draft the actual message — on request only, never automatically.
+have Accelio draft the actual message — on request only, never automatically.
 
-- Reelo (Phase 6) still decides **who** to contact and **why**; the AI
+- Accelio (Phase 6) still decides **who** to contact and **why**; the AI
   (OpenAI, `gpt-4o-mini`) only decides **how** to phrase it. The AI never
   determines whether a customer is overdue — it's handed the engine's own
   reason text and asked to phrase a message around it.
@@ -465,7 +489,7 @@ the official Meta WhatsApp Cloud API — never automatically.
   double-click or retry from sending the same message twice.
 - `/api/webhooks/whatsapp` receives Meta's delivery status callbacks
   (GET for the verification handshake using `WHATSAPP_VERIFY_TOKEN`, POST
-  for status events, optionally signature-verified via `WHATSAPP_APP_SECRET`)
+  for status events, signature-verified via `WHATSAPP_APP_SECRET`, mandatory in production)
   and updates a message's `sent`/`delivered`/`read`/`failed` status by its
   `provider_message_id`. See "WhatsApp message tracking + replies
   (Phase 9)" below for the full delivery lifecycle and inbound replies.
@@ -476,9 +500,9 @@ the official Meta WhatsApp Cloud API — never automatically.
 
 ## WhatsApp message tracking + replies (Phase 9)
 
-Once a message is sent, Reelo now tracks what actually happens to it —
+Once a message is sent, Accelio now tracks what actually happens to it —
 delivered, read, failed — and records when the customer replies, all from
-real Meta webhook events. This does NOT turn Reelo into a WhatsApp chatbot:
+real Meta webhook events. This does NOT turn Accelio into a WhatsApp chatbot:
 there are no automatic replies, no automated follow-ups, and no bulk
 sending. The owner approves every outbound message (Phase 8) and continues
 any conversation manually on WhatsApp itself.
@@ -511,7 +535,7 @@ any conversation manually on WhatsApp itself.
   (`getCommunicationTimelineForCustomer` in `src/lib/whatsapp/queries.ts`).
 - **Unknown senders**: an inbound message from a number that doesn't match
   any customer is stored with `customer_id = null` and surfaced on the
-  Activity page under "Unknown WhatsApp senders" — Reelo never guesses or
+  Activity page under "Unknown WhatsApp senders" — Accelio never guesses or
   silently creates a customer from WhatsApp traffic. The owner can
   explicitly click "Add as customer" (`src/lib/whatsapp/actions.ts`'s
   `addCustomerFromUnknownSender`) to create the customer and attach that
@@ -519,7 +543,7 @@ any conversation manually on WhatsApp itself.
 - **Customer profile**: "Communication history" now shows the full merged
   conversation — outbound messages with Sent/Delivered/Read/Failed status,
   and inbound replies — plus a "Customer replied" badge and a "Reply on
-  WhatsApp" link (a `wa.me/<number>` deep link; Reelo never sends anything
+  WhatsApp" link (a `wa.me/<number>` deep link; Accelio never sends anything
   automatically through it, it just opens WhatsApp for the owner to
   continue the conversation by hand).
 - **Activity page**: now real data instead of mock — lightweight counters
@@ -536,8 +560,9 @@ any conversation manually on WhatsApp itself.
 - **Webhook configuration required from you** (see `.env.example`):
   `WHATSAPP_VERIFY_TOKEN` (any string you choose, entered again in Meta's
   App Dashboard -> WhatsApp -> Configuration -> Webhook) and
-  `WHATSAPP_APP_SECRET` (strongly recommended in production — without it,
-  the webhook accepts unsigned requests and logs a warning). Meta's webhook
+  `WHATSAPP_APP_SECRET` (required in production — when `NODE_ENV=production`
+  and it is unset, the webhook refuses every request; in local development
+  it may be left empty and unsigned requests are accepted with a warning). Meta's webhook
   needs a public HTTPS URL; for local development, tunnel your dev server
   (e.g. with `ngrok http 3000`) and register
   `https://<your-tunnel>/api/webhooks/whatsapp` as the callback URL,
@@ -556,7 +581,7 @@ any conversation manually on WhatsApp itself.
 
 ## Analytics, campaign performance & customer reactivation (Phase 11)
 
-`/analytics` answers one question: **is Reelo actually helping bring
+`/analytics` answers one question: **is Accelio actually helping bring
 customers back?** Every number on it — and the lightweight summary on the
 main dashboard — comes from existing `messages`, `customer_messages`,
 `customer_events`, `campaigns`, and `campaign_recipients` rows (Phases
@@ -602,7 +627,7 @@ This is the central, and most carefully specified, metric. Defined in
 - **Revenue rule**: only the customer's **first** qualifying return visit
   counts toward "Revenue from customers who returned after outreach" — a
   second, third, etc. visit afterwards is real repeat business, but
-  attributing all of it to the original message would overstate Reelo's
+  attributing all of it to the original message would overstate Accelio's
   effect, so the metric stays conservative on purpose.
 - The 30-day boundary is inclusive (exactly 30.0 days still counts; 30
   days + 1ms does not) and computed on real UTC timestamps, never
@@ -611,8 +636,8 @@ This is the central, and most carefully specified, metric. Defined in
 
 **This is an observational metric, not proof of causation.** The UI, this
 README, and the code comments only ever say "returned after outreach" /
-"customers who returned after outreach" — never "Reelo generated this
-customer," "Reelo caused this sale," or any invented ROI/percentage
+"customers who returned after outreach" — never "Accelio generated this
+customer," "Accelio caused this sale," or any invented ROI/percentage
 uplift. If visit amounts (`customer_events.amount`) were never recorded
 for a business, the revenue tile shows **"Revenue tracking unavailable"**
 — never a fabricated ₹0, which would incorrectly imply zero revenue
@@ -676,54 +701,20 @@ everything this phase reads.
 
 ### Testing
 
-Since this project has no test framework installed (no jest/vitest in
-`package.json`) and this environment has no npm registry access to add
-one, the pure calculation logic (`reactivation.ts`, `rates.ts` — both
-deliberately Supabase-free) is covered by a small standalone assertion
-script: `scripts/analytics-tests.ts`. Run it with:
+Every pure-logic test lives in `scripts/*-tests.ts`. Run them all with:
 
 ```
-npx tsc scripts/analytics-tests.ts --outDir .analytics-test-build --module commonjs --target es2019 --esModuleInterop
-node .analytics-test-build/scripts/analytics-tests.js
+npm test
 ```
 
-It covers: rate math with a real and a zero denominator, a customer
-returning after outreach, a visit before outreach (must not count), the
-exact 30-day boundary (counts) and 30 days + 1ms (does not), the Phase 11
-spec's own multi-message example (credit goes to the most recent message),
-multiple visits (only the first qualifying one counts for revenue), no
-prior outreach, no visit at all, and a visit with a null amount (revenue
-stays `null`, never coerced to `0`).
+`scripts/run-tests.js` compiles them once (`tsconfig.tests.json`) and runs
+each file under four process time zones — UTC, Asia/Kolkata,
+America/New_York and Pacific/Kiritimati — because business date logic must
+use the business's own time zone, never the server's. A file that passes
+in one zone but not another fails the run.
 
-In the same spirit, three more standalone scripts cover other
-Supabase-free logic added in later phases: `scripts/automations-tests.ts`
-(automation eligibility/template rules), `scripts/recommendations-tests.ts`
-(the daily-recommendations ranking/filtering — a Phase 18 regression
-guard), and `scripts/leads-tests.ts` (lead priority/labels). Unlike
-`analytics-tests.ts`, the modules these three import reach back into files
-that use the `@/...` path alias, and `tsc` only consults
-`compilerOptions.paths` for type-checking — it never rewrites those
-specifiers in the emitted JS, so plain `node` can't resolve `@/...` at
-runtime. Compile each with its own tsconfig (`tsconfig.automations-test.json`,
-`tsconfig.recommendations-test.json`, `tsconfig.leads-test.json`) and run
-the output through `.test-alias-register.js`, a small `Module._resolveFilename`
-shim at the project root that maps `@/` back to that build's `src/` folder
-(this project has no `tsconfig-paths`/`ts-node` installed to do this for
-you):
-
-```
-npx tsc -p tsconfig.automations-test.json --outDir .automations-test-build --module commonjs --target es2019 --esModuleInterop
-TEST_BUILD_DIR=.automations-test-build node -r ./.test-alias-register.js .automations-test-build/scripts/automations-tests.js
-
-npx tsc -p tsconfig.recommendations-test.json --outDir .recommendations-test-build --module commonjs --target es2019 --esModuleInterop
-TEST_BUILD_DIR=.recommendations-test-build node -r ./.test-alias-register.js .recommendations-test-build/scripts/recommendations-tests.js
-
-npx tsc -p tsconfig.leads-test.json --outDir .leads-test-build --module commonjs --target es2019 --esModuleInterop
-TEST_BUILD_DIR=.leads-test-build node -r ./.test-alias-register.js .leads-test-build/scripts/leads-tests.js
-```
-
-As of this writing all four scripts pass: 18 (analytics) + 37 (automations)
-+ 50 (recommendations) + 34 (leads) = 139 assertions, 0 failures.
+The older per-file commands (`tsconfig.automations-test.json` etc.) still
+work but are no longer needed.
 
 Database-level behavior (real Supabase queries, RLS, the reactivation
 query against live data) was verified directly against this project's

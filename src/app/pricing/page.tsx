@@ -7,8 +7,8 @@ import { PLAN_ORDER, PLANS, formatPlanPrice } from "@/lib/billing/plans";
 import { Reveal } from "@/components/marketing/reveal";
 
 export const metadata = {
-  title: "Pricing — Reelo",
-  description: "Simple, transparent pricing for Reelo. Start on the Free plan — no card, no time limit — and upgrade whenever you need more.",
+  title: "Pricing — Accelio",
+  description: "Simple, transparent pricing for Accelio. Start on the Free plan — no card, no time limit — and upgrade whenever you need more.",
 };
 
 /**
@@ -35,7 +35,7 @@ export default function PricingPage() {
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-500 text-white">
               <Sparkles className="h-4 w-4" />
             </div>
-            <span className="text-lg font-semibold tracking-tight">Reelo</span>
+            <span className="text-lg font-semibold tracking-tight">Accelio</span>
           </Link>
           <div className="flex items-center gap-3">
             <Link href="/login" className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
@@ -55,7 +55,7 @@ export default function PricingPage() {
             Start free. Upgrade when you&apos;re ready.
           </h1>
           <p className="max-w-lg text-lg text-muted-foreground">
-            Reelo&apos;s Free plan is free forever, no card required. Upgrade to Starter or Growth any time you need more
+            Accelio&apos;s Free plan is free forever, no card required. Upgrade to Starter or Growth any time you need more
             room to grow.
           </p>
         </div>
@@ -117,7 +117,7 @@ export default function PricingPage() {
                 </ul>
                 {isFree && (
                   <p className="mt-6 text-sm text-muted-foreground">
-                    Use Reelo for free. Upgrade whenever you need more.
+                    Use Accelio for free. Upgrade whenever you need more.
                   </p>
                 )}
               </div>
@@ -216,9 +216,9 @@ export default function PricingPage() {
             <div className="flex h-6 w-6 items-center justify-center rounded-md bg-brand-500 text-white">
               <Sparkles className="h-3 w-3" />
             </div>
-            <span className="font-medium text-foreground">Reelo</span>
+            <span className="font-medium text-foreground">Accelio</span>
           </div>
-          <p>© 2026 Reelo. Made for local businesses.</p>
+          <p>© 2026 Accelio. Made for local businesses.</p>
         </div>
       </footer>
     </div>

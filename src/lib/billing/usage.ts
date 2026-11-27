@@ -34,7 +34,8 @@ export function resolvePeriodStart(subscription: SubscriptionRow, now: Date = ne
   if (subscription.current_period_start) {
     return new Date(subscription.current_period_start);
   }
-  return new Date(now.getFullYear(), now.getMonth(), 1);
+  // UTC month start — deterministic regardless of the server's clock zone.
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
 }
 
 export async function countCustomersForBusiness(businessId: string, supabase?: SupabaseClient): Promise<number> {

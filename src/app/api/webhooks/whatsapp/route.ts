@@ -1,9 +1,9 @@
-import { createHmac, timingSafeEqual } from "crypto";
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { whatsappEnv } from "@/lib/whatsapp/config";
 import { handleStatusEvent } from "@/lib/whatsapp/webhooks/status";
 import { handleInboundMessages } from "@/lib/whatsapp/webhooks/inbound";
+import { checkWebhookSignature } from "@/lib/whatsapp/signature";
 
 export const dynamic = "force-dynamic";
 
@@ -30,7 +30,7 @@ export async function GET(request: Request) {
  * delivered, read, failed) AND inbound customer messages (Phase 9).
  *
  * Uses the service-role client (see `@/lib/supabase/admin`) because these
- * requests come from Meta's servers, not a signed-in Reelo user — there is
+ * requests come from Meta's servers, not a signed-in user — there is
  * no session/auth.uid() for RLS to key off. Status updates correlate via
  * `provider_message_id` (see `lib/whatsapp/webhooks/status.ts`); inbound
  * messages attribute to a business via `phone_number_id` (see
@@ -45,18 +45,18 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const rawBody = await request.text();
 
-  if (whatsappEnv.appSecret) {
-    const signatureHeader = request.headers.get("x-hub-signature-256");
-    if (!isValidMetaSignature(rawBody, signatureHeader, whatsappEnv.appSecret)) {
-      console.error("[webhook/whatsapp] Rejected request with invalid/missing signature.");
-      return NextResponse.json({ ok: false }, { status: 401 });
-    }
-  } else {
-    // No app secret configured — payload authenticity can't be verified.
-    // Fine for local development, but this should be set before any real
-    // production traffic reaches this endpoint.
-    console.warn("[webhook/whatsapp] WHATSAPP_APP_SECRET is not set — accepting webhook without signature verification.");
+  // Milestone 1 — the app secret is mandatory in production.
+  const signature = checkWebhookSignature({
+    rawBody,
+    signatureHeader: request.headers.get("x-hub-signature-256"),
+    appSecret: whatsappEnv.appSecret,
+    nodeEnv: process.env.NODE_ENV,
+  });
+  if (!signature.accept) {
+    console.error(`[webhook/whatsapp] Rejected request: ${signature.reason}`);
+    return NextResponse.json({ ok: false }, { status: signature.status });
   }
+  if (!signature.verified) console.warn(`[webhook/whatsapp] ${signature.warning}`);
 
   let payload: unknown;
   try {
@@ -76,17 +76,6 @@ export async function POST(request: Request) {
   }
 
   return NextResponse.json({ ok: true });
-}
-
-function isValidMetaSignature(rawBody: string, signatureHeader: string | null, appSecret: string): boolean {
-  if (!signatureHeader) return false;
-
-  const expected = `sha256=${createHmac("sha256", appSecret).update(rawBody).digest("hex")}`;
-  const expectedBuffer = Buffer.from(expected);
-  const providedBuffer = Buffer.from(signatureHeader);
-
-  if (expectedBuffer.length !== providedBuffer.length) return false;
-  return timingSafeEqual(expectedBuffer, providedBuffer);
 }
 
 async function processWebhookPayload(payload: unknown): Promise<void> {

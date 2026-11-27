@@ -10,6 +10,7 @@
 import { getMessageMetrics } from "./messages";
 import { getReactivationSummary } from "./reactivation-query";
 import { resolveAnalyticsDateRange } from "./date-range";
+import { DEFAULT_BUSINESS_TIMEZONE } from "@/lib/dates";
 
 export interface DashboardAnalyticsSummary {
   contacted: number;
@@ -19,8 +20,11 @@ export interface DashboardAnalyticsSummary {
   read: number;
 }
 
-export async function getDashboardAnalyticsSummary(businessId: string): Promise<DashboardAnalyticsSummary> {
-  const range = resolveAnalyticsDateRange({ range: "30d" });
+export async function getDashboardAnalyticsSummary(
+  businessId: string,
+  timeZone: string = DEFAULT_BUSINESS_TIMEZONE
+): Promise<DashboardAnalyticsSummary> {
+  const range = resolveAnalyticsDateRange({ range: "30d" }, timeZone);
   const [messages, reactivation] = await Promise.all([
     getMessageMetrics(businessId, range),
     getReactivationSummary(businessId, range),

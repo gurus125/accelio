@@ -34,7 +34,7 @@ export function RealCustomerTable({ customers }: { customers: RealCustomer[] }) 
               <td className="px-4 py-3">{customer.visitCount}</td>
               <td className="px-4 py-3 font-medium">{formatINR(customer.totalSpent)}</td>
               <td className="px-4 py-3">
-                <StatusBadge status={customer.status} />
+                <StatusBadge status={customer.derivedStatus} />
               </td>
             </tr>
           ))}

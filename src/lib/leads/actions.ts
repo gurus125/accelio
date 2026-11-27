@@ -13,8 +13,8 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { requireBusinessForCurrentUser } from "@/lib/business/queries";
 import { requireOwner } from "@/lib/auth/access";
-import { normalizePhoneForWhatsApp } from "@/lib/whatsapp/phone";
-import type { CustomerRow, LeadRow, LeadStatus, LeadWidgetRow } from "@/types/database";
+import { normalizeIndianMobile } from "@/lib/phone";
+import type { LeadRow, LeadStatus, LeadWidgetRow } from "@/types/database";
 
 const MUTABLE_STATUSES: readonly LeadStatus[] = ["new", "contacted", "replied", "qualified", "converted", "lost"];
 
@@ -80,29 +80,22 @@ export async function convertLeadToCustomer(leadId: string): Promise<{ error?: s
   if (!lead) return { error: "Lead not found." };
   if (lead.customer_id) return { error: "This lead is already linked to a customer.", customerId: lead.customer_id };
 
-  const normalizedLeadPhone = lead.phone ? normalizePhoneForWhatsApp(lead.phone) : null;
+  const normalizedLeadPhone = normalizeIndianMobile(lead.phone_normalized ?? lead.phone);
   if (!normalizedLeadPhone) {
     return { error: "This lead doesn't have a usable phone number to match or create a customer from." };
   }
 
-  // Same-business scan-and-match-by-normalized-phone pattern already used
-  // by the inbound WhatsApp webhook (see lib/whatsapp/webhooks/inbound.ts)
-  // — customers.phone has no normalized column of its own, and businesses
-  // run small enough customer lists that this stays cheap and correct
-  // rather than guessing with a raw-string comparison.
-  const { data: customers, error: customersError } = await supabase
+  // Customer phones are stored normalised ("+91XXXXXXXXXX", see
+  // lib/phone.ts), so an exact match is the correct and complete check.
+  const { data: existingCustomer, error: customersError } = await supabase
     .from("customers")
-    .select("id, phone")
-    .eq("business_id", business.id);
+    .select("id")
+    .eq("business_id", business.id)
+    .eq("phone", normalizedLeadPhone)
+    .maybeSingle();
   if (customersError) return { error: customersError.message };
 
-  let customerId: string | null = null;
-  for (const customer of (customers ?? []) as Pick<CustomerRow, "id" | "phone">[]) {
-    if (normalizePhoneForWhatsApp(customer.phone) === normalizedLeadPhone) {
-      customerId = customer.id;
-      break;
-    }
-  }
+  let customerId: string | null = (existingCustomer?.id as string | undefined) ?? null;
 
   if (!customerId) {
     const { data: created, error: createError } = await supabase
@@ -110,17 +103,21 @@ export async function convertLeadToCustomer(leadId: string): Promise<{ error?: s
       .insert({
         business_id: business.id,
         name: lead.name?.trim() || "New customer",
-        phone: lead.phone,
+        phone: normalizedLeadPhone,
         status: "active",
         notes: lead.interest ? `From website lead: ${lead.interest}` : "From website lead.",
+        // Milestone 1 — the lead form's consent checkbox carries over.
+        whatsapp_consent: lead.consent_status === "given" && !lead.opted_out_at,
+        consent_source: lead.consent_status === "given" ? "lead" : null,
+        consent_at: lead.consent_status === "given" ? lead.consent_given_at : null,
+        opted_out_at: lead.opted_out_at ?? null,
       })
       .select("id")
       .single();
 
     if (createError) {
-      // 23505 = the phone already exists as a customer under a slightly
-      // different raw format than our normalized match caught — extremely
-      // unlikely given the scan above, but never create a duplicate.
+      // 23505 = a concurrent request created this customer between the
+      // lookup above and this insert — never create a duplicate.
       if (createError.code === "23505") {
         return { error: "A customer with this phone number already exists." };
       }

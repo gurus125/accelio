@@ -21,7 +21,7 @@ import { suggestMapping } from "@/lib/import/mapping";
 import { buildImportRows, computeSummary, isDuplicateRow, willImportRow } from "@/lib/import/validate";
 import { markDuplicatesAgainstExisting, markDuplicatesInFile } from "@/lib/import/duplicates";
 import { getExistingPhonesForImport, importCustomerBatch, type ImportRowInput } from "@/lib/import/actions";
-import type { ColumnMapping, ImportFailure, NormalizedImportRow, ReeloField } from "@/types/import";
+import type { ColumnMapping, ImportFailure, NormalizedImportRow, AccelioField } from "@/types/import";
 
 const BATCH_SIZE = 200;
 
@@ -41,6 +41,8 @@ export function CustomerImportWizard() {
   const [resultImported, setResultImported] = React.useState(0);
   const [resultSkippedDuplicates, setResultSkippedDuplicates] = React.useState(0);
   const [resultFailed, setResultFailed] = React.useState<ImportFailure[]>([]);
+  const [resultWarnings, setResultWarnings] = React.useState<string[]>([]);
+  const [consentConfirmed, setConsentConfirmed] = React.useState(false);
 
   const reset = () => {
     setStep("upload");
@@ -54,6 +56,8 @@ export function CustomerImportWizard() {
     setResultImported(0);
     setResultSkippedDuplicates(0);
     setResultFailed([]);
+    setResultWarnings([]);
+    setConsentConfirmed(false);
   };
 
   const loadSheet = (workbook: ParsedWorkbook, sheetName: string) => {
@@ -89,7 +93,7 @@ export function CustomerImportWizard() {
     }
   };
 
-  const handleMappingChange = (header: string, field: ReeloField | null) => {
+  const handleMappingChange = (header: string, field: AccelioField | null) => {
     setMapping((prev) => ({ ...prev, [header]: field }));
   };
 
@@ -114,6 +118,7 @@ export function CustomerImportWizard() {
 
     let imported = 0;
     const failed: ImportFailure[] = [];
+    const warnings = new Set<string>();
 
     for (let i = 0; i < candidates.length; i += BATCH_SIZE) {
       const batch = candidates.slice(i, i + BATCH_SIZE);
@@ -123,14 +128,23 @@ export function CustomerImportWizard() {
         phone: r.phone as string,
         email: r.email,
         lastVisit: r.lastVisit,
+        service: r.service,
         totalSpent: r.totalSpent,
         visitCount: r.visitCount,
         notes: r.notes,
       }));
 
-      const outcome = await importCustomerBatch(input);
+      const outcome = await importCustomerBatch(input, { whatsappConsent: consentConfirmed });
       imported += outcome.insertedCount;
       failed.push(...outcome.failed);
+      if (outcome.error) {
+        if (outcome.insertedCount === 0 && outcome.failed.length === 0) {
+          // The whole batch was refused — report each row, never drop silently.
+          failed.push(...input.map((r) => ({ rowNumber: r.rowNumber, name: r.name, phone: r.phone, reason: outcome.error as string })));
+        } else {
+          warnings.add(outcome.error);
+        }
+      }
       setProgressDone((d) => d + batch.length);
     }
 
@@ -150,6 +164,7 @@ export function CustomerImportWizard() {
     setResultImported(imported);
     setResultSkippedDuplicates(duplicateRowCount + duplicatesSkippedAtImport);
     setResultFailed([...otherFailures, ...needsAttentionFailures]);
+    setResultWarnings(Array.from(warnings));
     setStep("done");
   };
 
@@ -196,7 +211,14 @@ export function CustomerImportWizard() {
         )}
 
         {step === "review" && (
-          <ImportReviewStep rows={rows} summary={summary} onBack={() => setStep("map")} onImport={handleImport} />
+          <ImportReviewStep
+            rows={rows}
+            summary={summary}
+            onBack={() => setStep("map")}
+            onImport={handleImport}
+            consentConfirmed={consentConfirmed}
+            onConsentChange={setConsentConfirmed}
+          />
         )}
 
         {step === "importing" && <ImportProgress done={progressDone} total={progressTotal} />}
@@ -206,6 +228,7 @@ export function CustomerImportWizard() {
             imported={resultImported}
             skippedDuplicates={resultSkippedDuplicates}
             failed={resultFailed}
+            warnings={resultWarnings}
             onImportAnother={reset}
           />
         )}

@@ -4,7 +4,7 @@ import { Reveal } from "./reveal";
 
 const STEPS = [
   { number: "01", icon: Link2, title: "Connect", description: "Connect your existing customer data." },
-  { number: "02", icon: Search, title: "Find", description: "Reelo finds customers worth contacting." },
+  { number: "02", icon: Search, title: "Find", description: "Accelio finds customers worth contacting." },
   { number: "03", icon: Eye, title: "Understand", description: "See why each customer matters." },
   {
     number: "04",
@@ -21,7 +21,7 @@ export function HowItWorksSection() {
     <section id="how-it-works" className="border-b border-border/80 bg-muted/30">
       <div className="container py-16 sm:py-20">
         <SectionHeading
-          heading="Reelo turns customer data into action."
+          heading="Accelio turns customer data into action."
           subheading="From customer history to meaningful outreach in a few simple steps."
         />
         <div className="relative mx-auto mt-14 max-w-5xl">

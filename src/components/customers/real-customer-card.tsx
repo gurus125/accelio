@@ -23,7 +23,7 @@ export function RealCustomerCard({ customer }: { customer: RealCustomer }) {
         <p className="font-medium">{formatINR(customer.totalSpent)}</p>
       </div>
       <div className="shrink-0">
-        <StatusBadge status={customer.status} />
+        <StatusBadge status={customer.derivedStatus} />
       </div>
     </Link>
   );

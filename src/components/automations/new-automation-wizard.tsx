@@ -129,7 +129,7 @@ export function NewAutomationWizard() {
 
       {step === 2 && automationType && (
         <Card className="space-y-4 p-6">
-          <h2 className="text-lg font-semibold">What should Reelo do?</h2>
+          <h2 className="text-lg font-semibold">What should Accelio do?</h2>
           <div className="space-y-2">
             <button
               type="button"
@@ -140,7 +140,7 @@ export function NewAutomationWizard() {
             >
               <p className="font-medium">Send an approved WhatsApp message automatically</p>
               <p className="mt-1 text-sm text-muted-foreground">
-                Reelo sends the exact message you approve below, once every safety check passes.
+                Accelio sends the exact message you approve below, once every safety check passes.
               </p>
             </button>
             <button
@@ -186,7 +186,7 @@ export function NewAutomationWizard() {
 
       {step === 3 && automationType && (
         <Card className="space-y-4 p-6">
-          <h2 className="text-lg font-semibold">How long should Reelo wait?</h2>
+          <h2 className="text-lg font-semibold">How long should Accelio wait?</h2>
           <div className="space-y-2">
             {AUTOMATION_DELAY_OPTIONS_MINUTES.map((minutes) => (
               <button
@@ -228,10 +228,10 @@ export function NewAutomationWizard() {
             <div className="rounded-lg border border-border bg-muted/30 p-3 text-sm">{messageTemplate}</div>
           )}
           <ul className="space-y-1.5 text-sm text-muted-foreground">
-            <li>- Reelo will only contact eligible customers or leads.</li>
+            <li>- Accelio will only contact eligible customers or leads.</li>
             <li>- It respects your communication rules, cooldowns, and daily limits.</li>
             <li>- You can pause or stop it at any time — including instantly, from Settings.</li>
-            <li>- If someone replies, Reelo will never auto-reply for you — you&apos;ll be told to follow up yourself.</li>
+            <li>- If someone replies, Accelio will never auto-reply for you — you&apos;ll be told to follow up yourself.</li>
           </ul>
           <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" checked={activateNow} onChange={(e) => setActivateNow(e.target.checked)} />

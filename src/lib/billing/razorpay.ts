@@ -82,7 +82,7 @@ export interface RazorpaySubscription {
  * comfortably longer than any business will run without ever changing
  * plans (a plan change creates a fresh subscription; see `actions.ts`).
  * `notes.business_id` is how the webhook maps a Razorpay event back to a
- * Reelo business without trusting anything else in the payload.
+ * Accelio business without trusting anything else in the payload.
  */
 export async function createRazorpaySubscription(params: {
   razorpayPlanId: string;

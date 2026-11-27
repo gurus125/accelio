@@ -1,6 +1,6 @@
 /**
  * Public website lead capture — the ONE place a lead can be created without
- * an authenticated Reelo session. Uses the service-role admin client (see
+ * an authenticated Accelio session. Uses the service-role admin client (see
  * `@/lib/supabase/admin`'s own comment on why: a website visitor has no
  * session for RLS to key off, the same situation Phase 9's WhatsApp webhook
  * is in). Because this bypasses RLS entirely, every trust decision normally
@@ -17,7 +17,7 @@
  */
 
 import { createAdminClient } from "@/lib/supabase/admin";
-import { normalizePhoneForWhatsApp } from "@/lib/whatsapp/phone";
+import { normalizeIndianMobile } from "@/lib/phone";
 import type { LeadRow, LeadSource, LeadWidgetRow } from "@/types/database";
 import {
   LEAD_CAPTURE_RATE_LIMIT_MAX,
@@ -151,7 +151,7 @@ export async function captureLead(input: LeadCaptureInput): Promise<LeadCaptureR
     return { ok: false, status: 400, error: "Enter a valid email address." };
   }
 
-  const phoneNormalized = rawPhone ? normalizePhoneForWhatsApp(rawPhone) : null;
+  const phoneNormalized = rawPhone ? normalizeIndianMobile(rawPhone) : null;
   // Phone is how the business actually follows up on WhatsApp — require a
   // confidently-normalizable one unless an email was given instead (the DB
   // constraint only requires *some* contact info; here we're stricter

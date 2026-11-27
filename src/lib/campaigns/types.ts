@@ -71,6 +71,9 @@ export interface CampaignResultCounts {
 export interface CampaignRecipientWithCustomer extends CampaignRecipientRow {
   customerName: string;
   customerPhone: string;
+  /** Milestone 1 — false when the customer opted out or never agreed
+   * to WhatsApp messages; the send loop skips them. */
+  customerCanMessage: boolean;
 }
 
 export const CAMPAIGN_TYPE_LABELS: Record<CampaignType, string> = {

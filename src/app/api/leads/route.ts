@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 
 /**
  * POST /api/leads — the ONLY public, unauthenticated write endpoint in
- * Reelo. A website visitor (not a signed-in Reelo user) posts here after
+ * Accelio. A website visitor (not a signed-in Accelio user) posts here after
  * voluntarily filling in the embed widget's form. See `lib/leads/capture.ts`
  * for every trust decision this makes explicit, since it can't rely on RLS
  * the way authenticated routes do.

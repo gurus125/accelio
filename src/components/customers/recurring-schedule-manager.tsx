@@ -24,7 +24,9 @@ import {
 import type { RecurringScheduleRow } from "@/types/database";
 
 function formatAnniversary(anchorDate: string): string {
-  const day = new Date(anchorDate).getDate();
+  // anchor_date is a plain calendar date ("YYYY-MM-DD") — read the day
+  // straight from it, never via the browser's time zone.
+  const day = Number(anchorDate.slice(8, 10));
   const suffix = day % 10 === 1 && day !== 11 ? "st" : day % 10 === 2 && day !== 12 ? "nd" : day % 10 === 3 && day !== 13 ? "rd" : "th";
   return `the ${day}${suffix} of every month`;
 }
@@ -39,7 +41,12 @@ export function RecurringScheduleManager({
   const router = useRouter();
   const [open, setOpen] = React.useState(false);
   const [label, setLabel] = React.useState("");
-  const [anchorDate, setAnchorDate] = React.useState(() => new Date().toISOString().slice(0, 10));
+  const [anchorDate, setAnchorDate] = React.useState(() => {
+    // Today on the staff member's own device (not UTC, which is yesterday
+    // in India before 5:30am).
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  });
   const [error, setError] = React.useState<string | null>(null);
   const [submitting, setSubmitting] = React.useState(false);
   const [workingId, setWorkingId] = React.useState<string | null>(null);
@@ -93,7 +100,7 @@ export function RecurringScheduleManager({
                 <p className="font-medium">{schedule.label}</p>
                 <p className="text-xs text-muted-foreground">
                   Repeats on {formatAnniversary(schedule.anchor_date)} — anchored to{" "}
-                  {new Date(schedule.anchor_date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                  {new Date(`${schedule.anchor_date.slice(0, 10)}T00:00:00Z`).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" })}
                 </p>
               </div>
               <div className="flex items-center gap-2">
@@ -120,7 +127,7 @@ export function RecurringScheduleManager({
         open={open}
         onClose={() => setOpen(false)}
         title="Add recurring reminder"
-        description="For calendar-based reminders like a monthly fee — not a visit pattern. Reelo will fire this every month on the same date, once you also create and activate a 'Recurring calendar reminder' automation."
+        description="For calendar-based reminders like a monthly fee — not a visit pattern. Accelio will fire this every month on the same date, once you also create and activate a 'Recurring calendar reminder' automation."
       >
         <form onSubmit={handleCreate} className="space-y-4">
           <InlineError message={error} />

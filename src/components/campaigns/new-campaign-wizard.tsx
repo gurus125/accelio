@@ -294,7 +294,7 @@ export function NewCampaignWizard({
           <div>
             <h2 className="text-lg font-semibold">What do you want to say?</h2>
             <p className="text-sm text-muted-foreground">
-              Write your own message, or let Reelo draft one. Use {"{{customer_name}}"} to personalize it — Reelo
+              Write your own message, or let Accelio draft one. Use {"{{customer_name}}"} to personalize it — Accelio
               fills it in for each customer automatically.
             </p>
           </div>

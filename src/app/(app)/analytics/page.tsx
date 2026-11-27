@@ -6,7 +6,9 @@ import { TrendBarChart } from "@/components/analytics/trend-bar-chart";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, Send, CheckCheck, Eye, MessageSquare, RotateCcw, Globe, UserPlus, CheckCircle2 } from "lucide-react";
 import { requireBusinessForCurrentUser } from "@/lib/business/queries";
+import { isSupabaseConfigured } from "@/lib/config";
 import { resolveAnalyticsDateRange } from "@/lib/analytics/date-range";
+import { getBusinessTimeZone } from "@/lib/dates";
 import { getAnalyticsOverview } from "@/lib/analytics/overview";
 import { getAnalyticsTrends } from "@/lib/analytics/trends";
 import { getOpportunityTypeAnalytics } from "@/lib/analytics/opportunities";
@@ -44,8 +46,27 @@ interface AnalyticsPageProps {
 }
 
 export default async function AnalyticsPage({ searchParams }: AnalyticsPageProps) {
+  // Without Supabase configured there's no data to analyse — show a calm
+  // notice instead of crashing (this also lets `next build` prerender the
+  // page in an environment with no Supabase env vars).
+  if (!isSupabaseConfigured) {
+    return (
+      <>
+        <TopBar title="Analytics" />
+        <div className="flex-1 p-4 sm:p-8">
+          <div className="rounded-2xl border border-dashed border-border bg-muted/30 p-8 text-center">
+            <p className="font-medium">Analytics needs your Supabase project connected.</p>
+            <p className="mt-1.5 text-sm text-muted-foreground">
+              Add your Supabase settings (see .env.example), then your real numbers will show here.
+            </p>
+          </div>
+        </div>
+      </>
+    );
+  }
+
   const business = await requireBusinessForCurrentUser();
-  const range = resolveAnalyticsDateRange(searchParams);
+  const range = resolveAnalyticsDateRange(searchParams, getBusinessTimeZone(business));
 
   const [overview, trends, opportunityStats, recentlyReturned, campaigns, leadSummary, leadSources, automationAnalytics] = await Promise.all([
     getAnalyticsOverview(business.id, range),
@@ -68,7 +89,7 @@ export default async function AnalyticsPage({ searchParams }: AnalyticsPageProps
     <>
       <TopBar
         title="Analytics"
-        subtitle="Is Reelo actually helping you bring customers back? Every number below comes from your real WhatsApp and visit records."
+        subtitle="Is Accelio actually helping you bring customers back? Every number below comes from your real WhatsApp and visit records."
       />
 
       <div className="flex-1 space-y-8 p-4 sm:p-8">
@@ -135,7 +156,7 @@ export default async function AnalyticsPage({ searchParams }: AnalyticsPageProps
           <h2 className="mb-1 text-lg font-semibold tracking-tight">Customer reactivation</h2>
           <p className="mb-4 text-sm text-muted-foreground">
             A customer counts as &ldquo;returned after outreach&rdquo; when they recorded a visit within{" "}
-            {REACTIVATION_ATTRIBUTION_DAYS} days of a WhatsApp message from Reelo. This is observational — it does not
+            {REACTIVATION_ATTRIBUTION_DAYS} days of a WhatsApp message from Accelio. This is observational — it does not
             claim the message caused the visit.
           </p>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

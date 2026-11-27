@@ -22,15 +22,15 @@ interface FaqItem {
 }
 
 const FAQS: FaqItem[] = [
-  { question: "What is Reelo?", answer: null },
-  { question: "How does Reelo find customers worth contacting?", answer: null },
+  { question: "What is Accelio?", answer: null },
+  { question: "How does Accelio find customers worth contacting?", answer: null },
   { question: "Do I need technical knowledge?", answer: null },
   { question: "Can I import my existing customer data?", answer: null },
-  { question: "Does Reelo automatically send WhatsApp messages?", answer: null },
+  { question: "Does Accelio automatically send WhatsApp messages?", answer: null },
   { question: "Can I start for free?", answer: null },
-  { question: "Which businesses can use Reelo?", answer: null },
+  { question: "Which businesses can use Accelio?", answer: null },
   { question: "Can I upgrade later?", answer: null },
-  { question: "Does Reelo replace WhatsApp?", answer: null },
+  { question: "Does Accelio replace WhatsApp?", answer: null },
 ];
 
 function FaqRow({ item, isOpen, onToggle }: { item: FaqItem; isOpen: boolean; onToggle: () => void }) {

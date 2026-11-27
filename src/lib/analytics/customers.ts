@@ -107,17 +107,24 @@ export async function getRecentlyReturnedCustomers(
   const summary = await getReactivationSummary(businessId, range);
   if (summary.records.length === 0) return [];
 
+  // Pick the rows to show first, then look up only those names — never an
+  // `.in()` with every customer id in the URL.
+  const recent = summary.records
+    .filter((r): r is typeof r & { outreachAt: string; returnAt: string } => Boolean(r.outreachAt && r.returnAt))
+    .sort((a, b) => new Date(b.returnAt).getTime() - new Date(a.returnAt).getTime())
+    .slice(0, limit);
+  if (recent.length === 0) return [];
+
   const supabase = createClient();
-  const customerIds = summary.records.map((r) => r.customerId);
-  const { data, error } = await supabase.from("customers").select("id, name").in("id", customerIds);
+  const { data, error } = await supabase
+    .from("customers")
+    .select("id, name")
+    .in("id", recent.map((r) => r.customerId));
   if (error) throw new Error(error.message);
 
   const nameById = new Map(((data ?? []) as { id: string; name: string }[]).map((c) => [c.id, c.name]));
 
-  return summary.records
-    .filter((r): r is typeof r & { outreachAt: string; returnAt: string } => Boolean(r.outreachAt && r.returnAt))
-    .sort((a, b) => new Date(b.returnAt).getTime() - new Date(a.returnAt).getTime())
-    .slice(0, limit)
+  return recent
     .map((r) => ({
       customerId: r.customerId,
       customerName: nameById.get(r.customerId) ?? "Customer",

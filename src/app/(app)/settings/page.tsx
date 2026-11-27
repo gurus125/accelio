@@ -55,7 +55,7 @@ export default async function SettingsPage() {
     isSupabaseConfigured && business ? await listDistinctServiceNamesForBusiness(business.id) : [];
 
   // Derived from the request itself (never hardcoded) so the embed snippet
-  // always points at wherever this Reelo instance is actually running —
+  // always points at wherever this Accelio instance is actually running —
   // staging or production.
   const headersList = headers();
   const host = headersList.get("x-forwarded-host") ?? headersList.get("host") ?? "localhost:3000";
@@ -92,7 +92,7 @@ export default async function SettingsPage() {
             </div>
             <div>
               <CardTitle>Business profile</CardTitle>
-              <CardDescription>How your business appears to Reelo and your customers.</CardDescription>
+              <CardDescription>How your business appears to Accelio and your customers.</CardDescription>
             </div>
           </CardHeader>
           <CardContent>
@@ -184,7 +184,7 @@ export default async function SettingsPage() {
             </div>
             <div>
               <CardTitle>Website lead capture</CardTitle>
-              <CardDescription>A small form your website visitors can use to reach you — no Reelo account needed.</CardDescription>
+              <CardDescription>A small form your website visitors can use to reach you — no Accelio account needed.</CardDescription>
             </div>
           </CardHeader>
           <CardContent>
@@ -231,7 +231,7 @@ export default async function SettingsPage() {
               <CardTitle>Service return intervals</CardTitle>
               <CardDescription>
                 How often customers should return for each service — used to give new customers a relevant
-                recommendation before Reelo has learned their own pattern.
+                recommendation before Accelio has learned their own pattern.
               </CardDescription>
             </div>
           </CardHeader>
@@ -318,7 +318,7 @@ export default async function SettingsPage() {
             </div>
             <div>
               <CardTitle>Notifications</CardTitle>
-              <CardDescription>Choose when Reelo should ping you.</CardDescription>
+              <CardDescription>Choose when Accelio should ping you.</CardDescription>
             </div>
           </CardHeader>
           <CardContent>

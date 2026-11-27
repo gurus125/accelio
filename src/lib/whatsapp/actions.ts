@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { requireBusinessForCurrentUser } from "@/lib/business/queries";
 import { requireOwner } from "@/lib/auth/access";
 import { verifyPhoneNumberId } from "./client";
+import { normalizeIndianMobile } from "@/lib/phone";
 
 export interface ConnectWhatsAppInput {
   phoneNumberId: string;
@@ -63,7 +64,27 @@ export async function connectWhatsApp(input: ConnectWhatsAppInput): Promise<{ er
     { onConflict: "business_id" }
   );
 
-  if (error) return { error: "Couldn't save your WhatsApp connection. Please try again." };
+  if (error) {
+    // Milestone 1 — a number can be connected to only one business
+    // (unique index from migration 0019).
+    if (error.code === "23505") {
+      await supabase.from("whatsapp_connections").upsert(
+        {
+          business_id: business.id,
+          phone_number_id: phoneNumberId,
+          business_account_id: businessAccountId || null,
+          connection_status: "error",
+        },
+        { onConflict: "business_id" }
+      );
+      revalidatePath("/settings");
+      return {
+        error:
+          "This WhatsApp number is already connected to another business on Accelio. If it's yours, contact support to move it.",
+      };
+    }
+    return { error: "Couldn't save your WhatsApp connection. Please try again." };
+  }
 
   revalidatePath("/settings");
   return {};
@@ -127,12 +148,17 @@ export async function addCustomerFromUnknownSender(
     return { error: "This sender is already linked to a customer." };
   }
 
+  const phone = normalizeIndianMobile(unknownMessage.from_phone);
+  if (!phone) {
+    return { error: "This sender's number isn't a valid Indian mobile number, so it can't be saved as a customer." };
+  }
+
   const { data: newCustomer, error: createError } = await supabase
     .from("customers")
     .insert({
       business_id: business.id,
       name: trimmedName,
-      phone: unknownMessage.from_phone,
+      phone,
       status: "active",
     })
     .select("id")

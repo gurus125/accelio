@@ -2,7 +2,7 @@
  * Phase 14 — the automation engine's core run loop. Given one active
  * automation, finds its candidates, checks every safety gate, and — only
  * for a `send_whatsapp` automation whose candidate passes every gate —
- * sends via the exact same reused WhatsApp path every other Reelo message
+ * sends via the exact same reused WhatsApp path every other Accelio message
  * already goes through (`decideSendMode` / `dispatchWhatsAppMessage` /
  * `reserveWhatsAppMessage` / `markMessageSent` / `markMessageFailed`).
  *
@@ -17,7 +17,7 @@ import { getCustomer } from "@/lib/customers/queries";
 import { getLead, markLeadContacted } from "@/lib/leads/queries";
 import {
   reserveWhatsAppMessage,
-  getWhatsAppConnection,
+  getActiveWhatsAppConnection,
   markMessageFailed,
   markMessageSent,
 } from "@/lib/whatsapp/queries";
@@ -38,6 +38,7 @@ import { recordAutomationRun, stampAutomationLastRunAt } from "./queries";
 import { getRemainingWhatsAppMessageQuota, getWhatsAppReservationContext } from "@/lib/billing/limits";
 import { AUTOMATION_OPPORTUNITY_TYPE_PREFIX, MAX_AUTOMATION_CANDIDATES_PER_TICK } from "./constants";
 import type { AutomationCandidate, AutomationRow, AutomationRunOutcome } from "./types";
+import { getBusinessTimeZone } from "@/lib/dates";
 
 /** Reasons that describe a candidate simply not being due YET (a delay
  * still counting down, or outside business hours). These are NOT written
@@ -89,7 +90,8 @@ export async function runAutomationOnce(
   // otherwise a single tick processing many candidates could blow past
   // the daily cap before any of those sends were reflected in a fresh
   // DB count. The DB count itself remains the source of truth across ticks.
-  let sentTodayCount = await countAutomatedMessagesSentTodayForBusiness(business.id, supabase, now);
+  const timeZone = getBusinessTimeZone(business);
+  let sentTodayCount = await countAutomatedMessagesSentTodayForBusiness(business.id, supabase, now, timeZone);
   // Phase 16 — the WhatsApp send quota is shared across every send path
   // (customer, lead, campaign, automation); seeded once per tick and
   // decremented locally for the same reason `sentTodayCount` is, then
@@ -130,6 +132,7 @@ export async function runAutomationOnce(
       monthlyCountForCustomerOrLead,
       now,
       supabase,
+      timeZone,
     });
 
     if (!eligibility.eligible) {
@@ -271,7 +274,7 @@ export async function runAutomationOnce(
 
     const messageRecord = reservation.message;
 
-    const connection = await getWhatsAppConnection(business.id, supabase);
+    const connection = await getActiveWhatsAppConnection(business.id, supabase);
     const phoneNumberId = connection?.phone_number_id ?? "";
     const recipientFirstName = (
       customerName ?? candidate.templateContext.customerName ?? candidate.templateContext.leadName ?? "there"

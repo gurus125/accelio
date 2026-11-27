@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { requireOwner } from "@/lib/auth/access";
 import { ensureFreeSubscriptionForBusiness } from "@/lib/billing/subscription";
+import { INVALID_PHONE_MESSAGE, normalizeIndianMobile } from "@/lib/phone";
 
 export interface EnsureBusinessInput {
   name?: string;
@@ -63,7 +64,7 @@ export async function ensureBusinessForCurrentUser(
     business_type: input.businessType ?? null,
     owner_name: input.ownerName ?? fallbackOwnerName,
     city: input.city ?? null,
-    phone: input.phone ?? null,
+    phone: normalizeIndianMobile(input.phone) ?? input.phone ?? null,
   });
 
   if (error) {
@@ -119,6 +120,11 @@ export async function updateBusinessProfile(
     return { error: "Business name can't be empty." };
   }
 
+  // Optional, but when given it must be a real Indian mobile — Test Mode
+  // sends a WhatsApp message to it.
+  const phone = input.phone.trim() ? normalizeIndianMobile(input.phone) : null;
+  if (input.phone.trim() && !phone) return { error: INVALID_PHONE_MESSAGE };
+
   const supabase = createClient();
   const { error } = await supabase
     .from("businesses")
@@ -127,7 +133,7 @@ export async function updateBusinessProfile(
       business_type: input.businessType.trim() || null,
       city: input.city.trim() || null,
       owner_name: input.ownerName.trim() || null,
-      phone: input.phone.trim() || null,
+      phone,
     })
     .eq("id", membership.business.id);
 

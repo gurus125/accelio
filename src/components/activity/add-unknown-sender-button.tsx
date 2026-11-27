@@ -48,7 +48,7 @@ export function AddUnknownSenderButton({ customerMessageId, fromPhone }: { custo
         open={open}
         onClose={() => !submitting && setOpen(false)}
         title="Add as customer"
-        description={`Save ${fromPhone} as a customer in Reelo.`}
+        description={`Save ${fromPhone} as a customer in Accelio.`}
       >
         <form onSubmit={handleSubmit} className="space-y-4">
           <InlineError message={error} />

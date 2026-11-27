@@ -73,7 +73,7 @@ async function RealCampaignsPage() {
           <div className="rounded-2xl border border-dashed border-border p-10 text-center">
             <p className="font-medium">No campaigns yet</p>
             <p className="mt-1 text-sm text-muted-foreground">
-              Create a campaign to reach a group of customers at once — Reelo will show you exactly who before
+              Create a campaign to reach a group of customers at once — Accelio will show you exactly who before
               anything is sent.
             </p>
           </div>

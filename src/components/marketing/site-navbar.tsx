@@ -35,7 +35,7 @@ export function SiteNavbar() {
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-500 text-white transition-transform duration-200 group-hover:scale-105">
             <Sparkles className="h-4 w-4" />
           </div>
-          <span className="text-lg font-semibold tracking-tight">Reelo</span>
+          <span className="text-lg font-semibold tracking-tight">Accelio</span>
         </Link>
 
         <nav className="hidden items-center gap-8 text-sm font-medium text-muted-foreground md:flex">

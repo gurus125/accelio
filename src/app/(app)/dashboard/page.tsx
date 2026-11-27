@@ -3,6 +3,7 @@ import { ArrowRight, CalendarClock, UserX, MessageSquare, Tag, Users, UserCheck,
 import { TopBar } from "@/components/layout/topbar";
 import { StatCard } from "@/components/stat-card";
 import { StatusBadge } from "@/components/status-badge";
+import { countCustomersByStatus, deriveCustomerStatus } from "@/lib/customers/status";
 import { OpportunityCard } from "@/components/opportunities/opportunity-card";
 import { getAllOpportunities, getOpportunityCounts } from "@/lib/opportunity-engine";
 import { getCustomerById } from "@/lib/mock-data";
@@ -21,6 +22,7 @@ import { MAX_LEAD_FOLLOWUPS_SHOWN } from "@/lib/leads/constants";
 import { WebsiteLeadFollowUps } from "@/components/leads/website-lead-follow-ups";
 import { AutomationsSummaryCard } from "@/components/automations/automations-summary-card";
 import { getAutomationDashboardSummary } from "@/lib/automations/queries";
+import { getBusinessTimeZone } from "@/lib/dates";
 
 export default async function DashboardPage() {
   if (!isSupabaseConfigured) {
@@ -32,7 +34,7 @@ export default async function DashboardPage() {
   if (!business) {
     return (
       <>
-        <TopBar title="Welcome to Reelo" subtitle="Finish setting up your business to see your dashboard." />
+        <TopBar title="Welcome to Accelio" subtitle="Finish setting up your business to see your dashboard." />
         <div className="flex-1 p-4 sm:p-8">
           <div className="rounded-2xl border border-dashed border-border p-8 text-center">
             <p className="font-medium">Your business profile isn&apos;t set up yet.</p>
@@ -52,24 +54,32 @@ export default async function DashboardPage() {
   const [customers, events, analyticsSummary, dailyRecommendations, leads, automationsSummary, serviceBaselines] = await Promise.all([
     listCustomers(business.id),
     listEventsForBusiness(business.id),
-    getDashboardAnalyticsSummary(business.id),
+    getDashboardAnalyticsSummary(business.id, getBusinessTimeZone(business)),
     getDailyRecommendations(business),
     listLeadsForBusiness(business.id),
-    getAutomationDashboardSummary(business.id),
+    getAutomationDashboardSummary(business.id, undefined, undefined, getBusinessTimeZone(business)),
     listServiceBaselines(business.id),
   ]);
   const leadFollowUps = buildLeadFollowUps(leads).slice(0, MAX_LEAD_FOLLOWUPS_SHOWN);
-  const counts = {
-    total: customers.length,
-    active: customers.filter((c) => c.status === "active").length,
-    due: customers.filter((c) => c.status === "due").length,
-    inactive: customers.filter((c) => c.status === "inactive").length,
-    followUp: customers.filter((c) => c.status === "follow_up").length,
-  };
-  const recent = customers.slice(0, 5);
-
   const eventsByCustomerId = groupEventsByCustomer(events);
   const opportunities = calculateOpportunities(customers, eventsByCustomerId, business, serviceBaselines);
+
+  // Milestone 1 — statuses come from the engine, never the old dropdown.
+  const opportunityByCustomer = new Map(opportunities.map((o) => [o.customerId, o]));
+  const statusOf = (customerId: string) =>
+    deriveCustomerStatus(
+      opportunityByCustomer.get(customerId),
+      (eventsByCustomerId.get(customerId) ?? []).filter((e) => e.event_type === "visit").length
+    );
+  const statusCounts = countCustomersByStatus(customers.map((c) => statusOf(c.id)));
+  const counts = {
+    total: customers.length,
+    active: statusCounts.active,
+    due: statusCounts.due,
+    inactive: statusCounts.inactive,
+    followUp: statusCounts.follow_up,
+  };
+  const recent = customers.slice(0, 5);
   const opportunityCounts = {
     total: opportunities.length,
     dueToReturn: opportunities.filter((o) => o.type === "due_to_return").length,
@@ -159,7 +169,7 @@ export default async function DashboardPage() {
                       className="flex items-center justify-between px-4 py-3 text-sm transition-colors hover:bg-muted/40"
                     >
                       <span className="font-medium">{c.name}</span>
-                      <StatusBadge status={c.status} />
+                      <StatusBadge status={statusOf(c.id)} />
                     </Link>
                   </li>
                 ))}
@@ -188,7 +198,7 @@ function MockDashboard() {
             {counts.total} customers are worth contacting today
           </p>
           <p className="mt-1.5 text-sm text-brand-700/80">
-            Reelo scanned your customer list and found people who are overdue, going quiet, or worth a timely offer.
+            Accelio scanned your customer list and found people who are overdue, going quiet, or worth a timely offer.
           </p>
         </div>
 

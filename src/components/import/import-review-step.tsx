@@ -71,9 +71,12 @@ interface ImportReviewStepProps {
   summary: ImportSummary;
   onBack: () => void;
   onImport: () => void;
+  /** Milestone 1 — owner confirms these customers agreed to WhatsApp. */
+  consentConfirmed: boolean;
+  onConsentChange: (value: boolean) => void;
 }
 
-export function ImportReviewStep({ rows, summary, onBack, onImport }: ImportReviewStepProps) {
+export function ImportReviewStep({ rows, summary, onBack, onImport, consentConfirmed, onConsentChange }: ImportReviewStepProps) {
   const [filter, setFilter] = React.useState<FilterId>("all");
   const filtered = rows.filter((r) => rowMatchesFilter(r, filter));
 
@@ -150,6 +153,22 @@ export function ImportReviewStep({ rows, summary, onBack, onImport }: ImportRevi
         {summary.duplicatesTotal > 0 && <p>{summary.duplicatesTotal.toLocaleString("en-IN")} duplicates will be skipped.</p>}
         {summary.needsAttention > 0 && <p>{summary.needsAttention.toLocaleString("en-IN")} rows need attention and won&apos;t be imported.</p>}
       </div>
+
+      <label className="flex min-h-11 cursor-pointer items-start gap-3 rounded-2xl border border-border p-4 text-sm">
+        <input
+          type="checkbox"
+          className="mt-0.5 h-5 w-5 shrink-0 accent-brand-600"
+          checked={consentConfirmed}
+          onChange={(e) => onConsentChange(e.target.checked)}
+        />
+        <span>
+          <span className="font-medium">These customers agreed to get WhatsApp reminders &amp; offers from my business</span>
+          <span className="block text-muted-foreground">
+            Leave unticked if you&apos;re not sure — they&apos;ll still be imported, but no reminder or offer will be sent to
+            them until you record their consent (or they come in and agree at billing).
+          </span>
+        </span>
+      </label>
 
       <div className="flex gap-3">
         <Button variant="secondary" onClick={onBack}>

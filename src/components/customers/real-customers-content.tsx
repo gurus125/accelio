@@ -10,27 +10,32 @@ import { RealCustomerTable } from "@/components/customers/real-customer-table";
 import { AddCustomerButton } from "@/components/customers/add-customer-button";
 import { EmptyState } from "@/components/empty-state";
 import { cn } from "@/lib/utils";
-import type { CustomerStatus } from "@/types";
+import type { DerivedCustomerStatus } from "@/lib/customers/status";
 import type { RealCustomer } from "@/types/database";
 
-const FILTERS: { id: CustomerStatus | "all"; label: string }[] = [
+const FILTERS: { id: DerivedCustomerStatus | "all"; label: string }[] = [
   { id: "all", label: "All" },
   { id: "active", label: "Active" },
   { id: "due", label: "Due" },
   { id: "inactive", label: "Inactive" },
   { id: "follow_up", label: "Follow up" },
+  { id: "new", label: "No visits yet" },
 ];
 
 export function RealCustomersContent({ customers }: { customers: RealCustomer[] }) {
   const [query, setQuery] = React.useState("");
-  const [filter, setFilter] = React.useState<CustomerStatus | "all">("all");
+  const [filter, setFilter] = React.useState<DerivedCustomerStatus | "all">("all");
 
+  // Phones are stored as "+91XXXXXXXXXX"; match on digits so "98765 43210"
+  // finds them too.
+  const queryDigits = query.replace(/\D/g, "").replace(/^(91|0)(?=\d{10}$)/, "");
   const filtered = customers.filter((c) => {
     const matchesQuery =
       query.trim().length === 0 ||
       c.name.toLowerCase().includes(query.toLowerCase()) ||
-      c.phone.includes(query);
-    const matchesFilter = filter === "all" || c.status === filter;
+      c.phone.includes(query) ||
+      (queryDigits.length >= 3 && c.phone.replace(/\D/g, "").includes(queryDigits));
+    const matchesFilter = filter === "all" || c.derivedStatus === filter;
     return matchesQuery && matchesFilter;
   });
 

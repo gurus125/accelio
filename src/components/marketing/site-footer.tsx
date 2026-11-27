@@ -36,7 +36,7 @@ export function SiteFooter() {
               <div className="flex h-7 w-7 items-center justify-center rounded-md bg-brand-500 text-white">
                 <Sparkles className="h-3.5 w-3.5" />
               </div>
-              <span className="font-semibold text-foreground">Reelo</span>
+              <span className="font-semibold text-foreground">Accelio</span>
             </div>
             <p className="mt-3 max-w-[16rem] text-sm text-muted-foreground">
               Helping local businesses turn existing customers into repeat customers.
@@ -58,7 +58,7 @@ export function SiteFooter() {
           ))}
         </div>
         <div className="mt-10 flex flex-col items-center justify-between gap-4 border-t border-border/80 pt-6 text-sm text-muted-foreground sm:flex-row">
-          <p>© 2026 Reelo. Made for local businesses.</p>
+          <p>© 2026 Accelio. Made for local businesses.</p>
           <Link href="/login" className="transition-colors hover:text-foreground">
             Log in
           </Link>

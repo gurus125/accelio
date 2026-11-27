@@ -5,7 +5,8 @@
  * customers by hand.
  */
 
-import { listCustomers } from "@/lib/customers/queries";
+import { listCustomers as listAllCustomers } from "@/lib/customers/queries";
+import { canMessageCustomer } from "@/lib/consent";
 import { getOpportunitiesForCurrentBusiness } from "@/lib/opportunities/queries";
 import type { OpportunityType } from "@/lib/opportunities/types";
 import type { CustomerRow } from "@/types/database";
@@ -19,6 +20,12 @@ const CAMPAIGN_TYPE_TO_OPPORTUNITY: Partial<Record<CampaignType, OpportunityType
   follow_up: "follow_up",
   service_reminder: "service_reminder",
 };
+
+/** Milestone 1 — campaign audiences only ever contain customers who agreed
+ * to WhatsApp messages and haven't opted out (src/lib/consent.ts). */
+async function listCustomers(businessId: string): Promise<CustomerRow[]> {
+  return (await listAllCustomers(businessId)).filter(canMessageCustomer);
+}
 
 export interface AudienceCandidate {
   customer: CustomerRow;

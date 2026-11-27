@@ -12,7 +12,7 @@ export function RecommendationsSection() {
     <section className="border-b border-border/80">
       <div className="container py-16 sm:py-20">
         <SectionHeading
-          heading="Every day, Reelo tells you who to contact."
+          heading="Every day, Accelio tells you who to contact."
           subheading="No spreadsheets. No guessing. No searching through hundreds of customers."
         />
 
@@ -57,7 +57,7 @@ export function RecommendationsSection() {
         </Reveal>
 
         <p className="mx-auto mt-8 max-w-lg text-center text-base font-medium text-foreground">
-          You decide who to contact. Reelo helps you take action.
+          You decide who to contact. Accelio helps you take action.
         </p>
       </div>
     </section>

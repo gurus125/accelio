@@ -35,7 +35,7 @@ export function AnalyticsSection() {
               <StatCard
                 icon={Repeat}
                 value={ANALYTICS_EXAMPLE.returnedAfterOutreach}
-                label="Returned after Reelo outreach"
+                label="Returned after Accelio outreach"
                 tone="warning"
               />
             </div>

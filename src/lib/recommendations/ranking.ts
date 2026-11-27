@@ -19,7 +19,7 @@ import type { RecommendationPriority } from "./types";
  * - A high-value customer gone quiet is always "High priority" once
  *   there's real evidence for it (confidence isn't low) — real money on
  *   the table is the most worth an owner's attention.
- * - "Due to return" is "High priority" only once Reelo has high
+ * - "Due to return" is "High priority" only once Accelio has high
  *   confidence in that customer's usual pattern; with only medium
  *   confidence it's "Recommended" instead, since the pattern is less
  *   certain.
