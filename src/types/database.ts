@@ -1,4 +1,12 @@
 import type { ConsentSource } from "@/lib/consent";
+import type {
+  TemplateCategory,
+  TemplateKey,
+  TemplateLanguage,
+  TemplateStatus,
+  TemplateVariable,
+  TemplateVariant,
+} from "@/lib/templates/catalog";
 import type { DerivedCustomerStatus } from "@/lib/customers/status";
 /**
  * Row shapes for the Phase 4 Supabase tables. These mirror
@@ -25,6 +33,10 @@ export interface BusinessRow {
    * (migration 0017). Defaults to Asia/Kolkata; read it via
    * `getBusinessTimeZone()` so a missing/invalid value falls back safely. */
   timezone?: string | null;
+  /** Milestone 2 (migration 0020) — language for WhatsApp templates. */
+  whatsapp_language?: TemplateLanguage | null;
+  /** Milestone 2 — parlour "discreet" mode: reminders never name the service. */
+  discreet_reminders?: boolean | null;
   created_at: string;
   updated_at: string;
 }
@@ -274,6 +286,26 @@ export interface RecurringScheduleRow {
   interval_type: RecurringScheduleIntervalType;
   status: RecurringScheduleStatus;
   created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+/** Milestone 2 — `message_templates` (migration 0020). */
+export interface MessageTemplateRow {
+  id: string;
+  business_id: string;
+  key: TemplateKey;
+  language: TemplateLanguage;
+  meta_language_code: string;
+  variant: TemplateVariant;
+  name: string;
+  category: TemplateCategory;
+  body: string;
+  variables: TemplateVariable[];
+  status: TemplateStatus;
+  provider_template_id: string | null;
+  rejection_reason: string | null;
+  status_checked_at: string | null;
   created_at: string;
   updated_at: string;
 }
