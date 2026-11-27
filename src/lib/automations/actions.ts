@@ -13,7 +13,9 @@ import { requireBusinessForCurrentUser } from "@/lib/business/queries";
 import { requireOwner } from "@/lib/auth/access";
 import { normalizePhoneForWhatsApp } from "@/lib/whatsapp/phone";
 import { getActiveWhatsAppConnection } from "@/lib/whatsapp/queries";
-import { decideSendMode, dispatchWhatsAppMessage } from "@/lib/whatsapp/send";
+import { dispatchWhatsAppMessage } from "@/lib/whatsapp/send";
+import { prepareWhatsAppSend } from "@/lib/templates/prepare";
+import { purposeForAutomationType } from "@/lib/templates/purpose";
 import {
   createAutomation,
   getAutomation,
@@ -207,20 +209,25 @@ export async function sendAutomationTestMessage(automationId: string): Promise<{
 
   // Test Mode deliberately dispatches OUTSIDE the normal `messages` table
   // pipeline: every `messages` row requires exactly one of customer_id /
-  // lead_id (the Phase 13 `messages_customer_or_lead_check` constraint),
-  // and a test send has neither — it isn't a real conversation with a real
-  // customer or lead, so it should never appear in a customer's WhatsApp
-  // history, the Activity feed, or automation analytics. It still goes
-  // through the exact same `decideSendMode` / `dispatchWhatsAppMessage`
-  // dispatch path as every real send, so Test Mode genuinely proves the
-  // WhatsApp connection works — it just isn't logged as a conversation.
+  // lead_id, and a test send has neither — it should never appear in a
+  // customer's WhatsApp history or analytics. It still uses the exact
+  // same planner (Milestone 2) and dispatch path as every real send. The
+  // owner hasn't "messaged the business", so this always uses the approved
+  // template — proving the template itself works.
+  const plan = await prepareWhatsAppSend({
+    business,
+    recipient: { name: "Test Customer" },
+    purpose: purposeForAutomationType(automation.automation_type),
+    freeformText: content,
+    lastInboundAt: null,
+    supabase,
+  });
+  if (!plan.ok) return { error: plan.error };
+
   const result = await dispatchWhatsAppMessage({
     phoneNumberId: connection.phone_number_id ?? "",
     to: normalizedPhone,
-    content,
-    customerFirstName: "there",
-    businessName: business.name,
-    decision: decideSendMode(),
+    plan,
   });
 
   if (!result.ok) return { error: result.error };

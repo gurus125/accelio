@@ -148,3 +148,60 @@ export async function verifyPhoneNumberId(
     return { ok: false, error: "Couldn't reach WhatsApp right now. Please try again." };
   }
 }
+
+/** Milestone 2 — submits one template to Meta for review. `payload` comes
+ * from `buildMetaTemplatePayload` (src/lib/templates/meta.ts). */
+export async function createWhatsAppTemplate(
+  businessAccountId: string,
+  payload: Record<string, unknown>
+): Promise<{ ok: true; id: string; status: string } | { ok: false; error: string; alreadyExists: boolean }> {
+  if (!whatsappEnv.accessToken) return { ok: false, error: "WhatsApp isn't connected yet.", alreadyExists: false };
+  try {
+    const response = await fetch(`https://graph.facebook.com/${WHATSAPP_GRAPH_API_VERSION}/${businessAccountId}/message_templates`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${whatsappEnv.accessToken}` },
+      body: JSON.stringify(payload),
+    });
+    const json = (await response.json().catch(() => null)) as
+      | { id?: string; status?: string; error?: { message?: string; error_user_msg?: string; error_subcode?: number } }
+      | null;
+    if (!response.ok || !json?.id) {
+      const message = json?.error?.error_user_msg ?? json?.error?.message ?? "WhatsApp didn't accept this template.";
+      console.error("[whatsapp] Template submission failed", response.status, message);
+      // Meta: a template with this name and language already exists.
+      const alreadyExists = /already exists/i.test(message) || json?.error?.error_subcode === 2388024;
+      return { ok: false, error: message, alreadyExists };
+    }
+    return { ok: true, id: json.id, status: json.status ?? "PENDING" };
+  } catch {
+    return { ok: false, error: "Couldn't reach WhatsApp right now. Please try again.", alreadyExists: false };
+  }
+}
+
+/** Milestone 2 — every template on the WhatsApp Business Account, with its
+ * review status (follows Meta's paging, capped for safety). */
+export async function listWhatsAppTemplates(
+  businessAccountId: string
+): Promise<{ ok: true; templates: { id: string; name: string; language: string; status: string; rejected_reason?: string }[] } | { ok: false; error: string }> {
+  if (!whatsappEnv.accessToken) return { ok: false, error: "WhatsApp isn't connected yet." };
+  const templates: { id: string; name: string; language: string; status: string; rejected_reason?: string }[] = [];
+  let url: string | null =
+    `https://graph.facebook.com/${WHATSAPP_GRAPH_API_VERSION}/${businessAccountId}/message_templates?fields=id,name,language,status,rejected_reason&limit=100`;
+  try {
+    for (let page = 0; url && page < 20; page++) {
+      const response: Response = await fetch(url, { headers: { Authorization: `Bearer ${whatsappEnv.accessToken}` } });
+      const json = (await response.json().catch(() => null)) as
+        | { data?: typeof templates; paging?: { next?: string }; error?: { message?: string } }
+        | null;
+      if (!response.ok || !json) {
+        console.error("[whatsapp] Listing templates failed", response.status, json?.error?.message);
+        return { ok: false, error: "Couldn't read your templates from WhatsApp. Check the WhatsApp Business Account ID in Settings." };
+      }
+      templates.push(...(json.data ?? []));
+      url = json.paging?.next ?? null;
+    }
+    return { ok: true, templates };
+  } catch {
+    return { ok: false, error: "Couldn't reach WhatsApp right now. Please try again." };
+  }
+}

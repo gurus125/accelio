@@ -18,14 +18,10 @@ export const whatsappEnv = {
   defaultPhoneNumberId: process.env.WHATSAPP_PHONE_NUMBER_ID ?? "",
   defaultBusinessAccountId: process.env.WHATSAPP_BUSINESS_ACCOUNT_ID ?? "",
   verifyToken: process.env.WHATSAPP_VERIFY_TOKEN ?? "",
-  /** Optional — enables verifying that webhook requests actually came from
-   * Meta (X-Hub-Signature-256). Strongly recommended before production. */
+  /** Verifies webhook requests came from Meta (X-Hub-Signature-256).
+   * Required in production (see src/lib/whatsapp/signature.ts). Templates
+   * are no longer configured here — they live in `message_templates`. */
   appSecret: process.env.WHATSAPP_APP_SECRET ?? "",
-  /** Optional approved template for V1 template-based sending. When unset,
-   * sends fall back to free-form text (only deliverable within Meta's
-   * customer-service window). See `send.ts`. */
-  templateName: process.env.WHATSAPP_TEMPLATE_NAME ?? "",
-  templateLanguage: process.env.WHATSAPP_TEMPLATE_LANGUAGE || "en_US",
 } as const;
 
 /** True once the one thing every send needs — the access token — is

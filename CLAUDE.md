@@ -65,10 +65,10 @@ GST tax invoices, inventory, payroll, appointment calendar, multi-branch, custom
 - [x] Webhook signature required when `NODE_ENV=production`; single next.config; rename Reelo → Accelio in UI.
 
 ### Milestone 2 — WhatsApp templates done properly
-- [ ] `message_templates` table (name, category: marketing/utility, language, body with variables, status) seeded with: return reminder, offer, feedback/review request, WhatsApp bill, owner daily digest.
-- [ ] Send logic: free-form only inside the 24h customer service window, otherwise an approved template with mapped variables. AI drafts may only fill template variables.
-- [ ] Parlour "discreet" mode: reminders never name the service.
-- [ ] Hindi, English and Hinglish versions.
+- [x] `message_templates` table (name, category: marketing/utility, language, body with variables, status) seeded with: return reminder, offer, feedback/review request, WhatsApp bill, owner daily digest.
+- [x] Send logic: free-form only inside the 24h customer service window, otherwise an approved template with mapped variables. AI drafts may only fill template variables.
+- [x] Parlour "discreet" mode: reminders never name the service.
+- [x] Hindi, English and Hinglish versions.
 
 ### Milestone 3 — Billing counter (the core new feature)
 - [ ] Business type (salon / parlour / unisex) with preset service price lists and default return days (e.g. haircut 28, beard 10, colour 45, threading 18, waxing 25, facial 30); owner can edit.

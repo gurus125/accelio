@@ -5,6 +5,7 @@ import type { MessageLanguage } from "@/lib/ai/types";
 const LANGUAGES: { value: MessageLanguage; label: string }[] = [
   { value: "english", label: "English" },
   { value: "hinglish", label: "Hinglish" },
+  { value: "hindi", label: "हिन्दी (Hindi)" },
 ];
 
 interface LanguageSelectorProps {

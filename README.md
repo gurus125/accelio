@@ -51,6 +51,32 @@ Then open [http://localhost:3000](http://localhost:3000).
 
 Apply migrations `0015`–`0019` in order (SQL Editor or `supabase db push`).
 
+## WhatsApp templates (Milestone 2)
+
+WhatsApp only delivers your own free-form text to a customer who messaged
+you in the last 24 hours. Everyone else must get a template WhatsApp has
+**approved**. Every send (manual, campaign, automation, test) goes through
+one planner, `src/lib/templates/plan.ts`:
+
+1. **Inside the 24h window:** the reviewed text is sent as written.
+2. **Otherwise:** the approved template for the message's purpose is sent
+   (return reminder, offer, feedback/review request, WhatsApp bill, owner
+   daily digest), in the business's language (English / हिन्दी / Hinglish),
+   falling back to English. Variables are filled from real data. AI or
+   owner text can only fill the offer's `{{3}}` slot; it never replaces the
+   approved wording.
+3. **Discreet mode** (Settings, on by default for parlours): reminders use a
+   template with no service slot, a free-form reminder naming a service is
+   refused, and the AI never sees or writes service names.
+
+Templates live in `message_templates` (migration `0020`), seeded for every
+business from `src/lib/templates/catalog.ts`, which is the source of truth;
+a test keeps the migration in sync. **Settings → WhatsApp templates**
+submits them to Meta (needs the WhatsApp Business Account ID on the
+connection), refreshes their review status, or lets you mark one approved
+if you created it yourself in WhatsApp Manager. The send dialog shows the
+exact text that will go out, and why.
+
 ## Environment variables
 
 Copy `.env.example` to `.env.local` and fill in your own Supabase project's
@@ -468,8 +494,9 @@ the official Meta WhatsApp Cloud API — never automatically.
 - `src/lib/whatsapp/` holds all the logic: `config.ts` (server-only env
   access), `types.ts`, `phone.ts` (conservative Indian mobile number
   normalization — returns null rather than guessing), `client.ts` (the one
-  place that calls `graph.facebook.com`), `send.ts` (decides template vs.
-  free-form), `queries.ts`, and `actions.ts` (the Settings connect/disconnect
+  place that calls `graph.facebook.com`), `send.ts` (dispatches a send plan;
+  the free-form vs. template decision lives in `src/lib/templates/plan.ts`
+  since Milestone 2), `queries.ts`, and `actions.ts` (the Settings connect/disconnect
   server actions). `POST /api/whatsapp/send`
   (`src/app/api/whatsapp/send/route.ts`) is the only endpoint that can
   actually send — it re-derives the business, customer, WhatsApp connection,
@@ -569,7 +596,8 @@ any conversation manually on WhatsApp itself.
   subscribed to the `messages` field.
 - **Not implemented in Phase 9** (by design — see the Phase 9 spec): AI
   auto-replies or chatbot behavior, automatic follow-ups, bulk/campaign
-  sending, and full WhatsApp template management. AI message generation
+  sending, and full WhatsApp template management (templates were added in
+  Milestone 2 — see "WhatsApp templates" above). AI message generation
   (Phase 7) remains owner-initiated only.
 - **Verification note**: webhook processing, status transitions, and
   idempotency were verified directly against the database (simulating

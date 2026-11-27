@@ -42,10 +42,6 @@ export interface MessageRow {
   updated_at: string;
 }
 
-export type SendDecision =
-  | { messageType: "template"; templateName: string }
-  | { messageType: "freeform"; templateName: null };
-
 export type MetaSendResult =
   | { ok: true; providerMessageId: string }
   | { ok: false; error: string };

@@ -7,12 +7,15 @@
 import type { OpportunityType } from "@/lib/opportunities/types";
 
 export type MessageTone = "friendly" | "professional" | "warm";
-export type MessageLanguage = "english" | "hinglish";
+export type MessageLanguage = "english" | "hinglish" | "hindi";
 
 export interface AIBusinessContext {
   name: string;
   businessType: string | null;
   city: string | null;
+  /** Milestone 2 — parlour "discreet" mode: the message must never name
+   * the service the customer had. */
+  discreet?: boolean;
 }
 
 /** Deliberately minimal — only what could plausibly help phrase a message.

@@ -3,7 +3,7 @@
  * automation, finds its candidates, checks every safety gate, and — only
  * for a `send_whatsapp` automation whose candidate passes every gate —
  * sends via the exact same reused WhatsApp path every other Accelio message
- * already goes through (`decideSendMode` / `dispatchWhatsAppMessage` /
+ * already goes through (`prepareWhatsAppSend` / `dispatchWhatsAppMessage` /
  * `reserveWhatsAppMessage` / `markMessageSent` / `markMessageFailed`).
  *
  * ALWAYS called with the service-role admin client (see
@@ -21,7 +21,11 @@ import {
   markMessageFailed,
   markMessageSent,
 } from "@/lib/whatsapp/queries";
-import { decideSendMode, dispatchWhatsAppMessage } from "@/lib/whatsapp/send";
+import { dispatchWhatsAppMessage, messageRecordFields } from "@/lib/whatsapp/send";
+import { prepareWhatsAppSend } from "@/lib/templates/prepare";
+import { planText } from "@/lib/templates/plan";
+import { purposeForAutomationType } from "@/lib/templates/purpose";
+import { getRecentInboundByCustomer, listMessageTemplates } from "@/lib/templates/queries";
 import { normalizePhoneForWhatsApp } from "@/lib/whatsapp/phone";
 import { getOutreachContextForBusiness, deriveOutreachContextFromTimeline } from "@/lib/recommendations/utils";
 import { getCommunicationTimelineForLead } from "@/lib/whatsapp/queries";
@@ -91,6 +95,12 @@ export async function runAutomationOnce(
   // the daily cap before any of those sends were reflected in a fresh
   // DB count. The DB count itself remains the source of truth across ticks.
   const timeZone = getBusinessTimeZone(business);
+  // Milestone 2 — templates and the 24h window, loaded once per run.
+  const [templates, recentInbound] = await Promise.all([
+    listMessageTemplates(business.id, supabase),
+    getRecentInboundByCustomer(business.id, now, supabase),
+  ]);
+  const purpose = purposeForAutomationType(automation.automation_type);
   let sentTodayCount = await countAutomatedMessagesSentTodayForBusiness(business.id, supabase, now, timeZone);
   // Phase 16 — the WhatsApp send quota is shared across every send path
   // (customer, lead, campaign, automation); seeded once per tick and
@@ -176,6 +186,41 @@ export async function runAutomationOnce(
       reminderLabel: candidate.templateContext.reminderLabel,
     });
 
+    // Milestone 2 — free-form only inside the 24h window; otherwise the
+    // approved template for this automation's purpose, with the approved
+    // automation text used only for an offer slot.
+    const plan = await prepareWhatsAppSend({
+      business,
+      recipient: {
+        customerId: candidate.customerId,
+        leadId: candidate.leadId,
+        name: customerName ?? candidate.templateContext.customerName ?? candidate.templateContext.leadName ?? null,
+      },
+      purpose,
+      freeformText: content,
+      templates,
+      lastInboundAt: recentInbound.get((candidate.customerId ?? candidate.leadId) as string) ?? null,
+      now,
+      supabase,
+    });
+    if (!plan.ok) {
+      await recordAutomationRun(
+        {
+          automationId: automation.id,
+          businessId: business.id,
+          leadId: candidate.leadId,
+          customerId: candidate.customerId,
+          entityEventKey: candidate.entityEventKey,
+          status: "skipped",
+          reason: plan.error,
+        },
+        supabase
+      );
+      outcomes.push({ candidate, status: "skipped", reason: plan.code, messageId: null });
+      continue;
+    }
+    const { messageType, templateName } = messageRecordFields(plan);
+
     // Phase 16 — a plan's WhatsApp allowance ran out mid-tick: skip every
     // remaining send-eligible candidate with a clear, auditable reason
     // rather than silently dropping them or bursting past the limit. This
@@ -228,9 +273,9 @@ export async function runAutomationOnce(
         customerId: candidate.customerId,
         leadId: candidate.leadId,
         opportunityType: `${AUTOMATION_OPPORTUNITY_TYPE_PREFIX}${automation.automation_type}`,
-        messageType: decideSendMode().messageType,
-        templateName: decideSendMode().templateName,
-        content,
+        messageType,
+        templateName,
+        content: planText(plan),
         periodStart: reservationContext.periodStart,
         limit: reservationContext.limit,
       },
@@ -276,18 +321,12 @@ export async function runAutomationOnce(
 
     const connection = await getActiveWhatsAppConnection(business.id, supabase);
     const phoneNumberId = connection?.phone_number_id ?? "";
-    const recipientFirstName = (
-      customerName ?? candidate.templateContext.customerName ?? candidate.templateContext.leadName ?? "there"
-    ).split(" ")[0];
 
     try {
       const result = await dispatchWhatsAppMessage({
         phoneNumberId,
         to: normalizedPhone as string,
-        content,
-        customerFirstName: recipientFirstName,
-        businessName: business.name,
-        decision: decideSendMode(),
+        plan,
       });
 
       if (result.ok) {

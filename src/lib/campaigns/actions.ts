@@ -239,7 +239,12 @@ export async function generateCampaignAiMessage(
   if (!campaign) return { error: "Campaign not found." };
 
   const result = await generateCampaignMessage({
-    business: { name: business.name, businessType: business.business_type, city: business.city },
+    business: {
+      name: business.name,
+      businessType: business.business_type,
+      city: business.city,
+      discreet: business.discreet_reminders === true,
+    },
     audienceLabel: campaignTypeLabel(campaign.campaign_type),
     audienceDescription: campaignTypeDescription(campaign.campaign_type),
     tone,

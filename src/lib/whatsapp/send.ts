@@ -1,46 +1,34 @@
 /**
- * Decides HOW a message actually goes out — template vs. free-form — and
- * dispatches it. Kept separate from the API route so the decision logic is
- * independently readable and testable.
- *
- * V1 policy: if an approved template is configured (`WHATSAPP_TEMPLATE_NAME`),
- * always use it — filling only its approved variables (customer first name,
- * business name), never the AI-composed sentence, since an approved
- * template's body text is fixed by Meta and can't be replaced with
- * arbitrary content. Without a configured template, fall back to sending
- * the exact reviewed/edited message as free-form text, which Meta will
- * only actually deliver within an open customer-service window (or after
- * the customer has messaged the business) — outside that window Meta
- * itself rejects it, which `client.ts` maps to a friendly error.
+ * Dispatches a planned WhatsApp message (see src/lib/templates/plan.ts for
+ * how free-form vs template is decided). Kept separate from the callers so
+ * every send path dispatches the same way.
  */
 
-import { whatsappEnv } from "./config";
 import { sendWhatsAppTemplate, sendWhatsAppText } from "./client";
-import type { MetaSendResult, SendDecision } from "./types";
+import type { MetaSendResult } from "./types";
+import type { SendPlan } from "@/lib/templates/plan";
 
-export function decideSendMode(): SendDecision {
-  if (whatsappEnv.templateName) {
-    return { messageType: "template", templateName: whatsappEnv.templateName };
-  }
-  return { messageType: "freeform", templateName: null };
+export type ReadySendPlan = Extract<SendPlan, { ok: true }>;
+
+/** What gets recorded on the `messages` row for this plan. */
+export function messageRecordFields(plan: ReadySendPlan): { messageType: "template" | "freeform"; templateName: string | null } {
+  return plan.mode === "template"
+    ? { messageType: "template", templateName: plan.templateName }
+    : { messageType: "freeform", templateName: null };
 }
 
 export async function dispatchWhatsAppMessage(params: {
   phoneNumberId: string;
   to: string;
-  content: string;
-  customerFirstName: string;
-  businessName: string;
-  decision: SendDecision;
+  plan: ReadySendPlan;
 }): Promise<MetaSendResult> {
-  if (params.decision.messageType === "template") {
+  if (params.plan.mode === "template") {
     return sendWhatsAppTemplate(params.phoneNumberId, {
       to: params.to,
-      templateName: params.decision.templateName,
-      languageCode: whatsappEnv.templateLanguage,
-      bodyParameters: [params.customerFirstName, params.businessName],
+      templateName: params.plan.templateName,
+      languageCode: params.plan.languageCode,
+      bodyParameters: params.plan.parameters,
     });
   }
-
-  return sendWhatsAppText(params.phoneNumberId, { to: params.to, body: params.content });
+  return sendWhatsAppText(params.phoneNumberId, { to: params.to, body: params.plan.text });
 }

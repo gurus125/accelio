@@ -16,6 +16,7 @@ const LANGUAGE_GUIDE: Record<MessageLanguage, string> = {
   english: "Plain, natural English.",
   hinglish:
     "Natural Hinglish (Hindi-English code-mixed, written only in Roman/Latin script, never Devanagari) — the way an Indian business owner actually texts a customer.",
+  hindi: "Simple, everyday Hindi written in Devanagari script — warm and conversational, not formal or literary.",
 };
 
 /**
@@ -31,7 +32,17 @@ function languageDirective(language: MessageLanguage): string {
   if (language === "hinglish") {
     return `IMPORTANT: Write the ENTIRE message in Hinglish, not English. Mix Hindi and English naturally, in Roman/Latin script only (never Devanagari) — for example: "Hi Gurpreet! Bahut din ho gaye aapko dekhe hue, umeed hai sab badhiya hoga. Jab bhi time mile, Aurelia mein zaroor aaiye!" Do not write a plain English message.`;
   }
+  if (language === "hindi") {
+    return `IMPORTANT: Write the ENTIRE message in simple, everyday Hindi in Devanagari script — for example: "नमस्ते प्रिया! काफ़ी दिन हो गए आपको देखे हुए। जब भी समय मिले, ज़रूर आइए!" Do not write in English or Roman script.`;
+  }
   return "Write the message in plain, natural English.";
+}
+
+/** Milestone 2 — appended to every prompt for a business in discreet mode. */
+export function discreetDirective(discreet: boolean | undefined): string {
+  return discreet
+    ? "\n\nIMPORTANT (privacy): This business is in discreet mode. NEVER name or hint at any service, treatment or body area (no waxing, threading, facial, colour, etc.). Say only that it's time for their next visit."
+    : "";
 }
 
 /**
@@ -96,7 +107,7 @@ export function buildUserPrompt(request: GenerateMessageRequest): string {
 
 ${JSON.stringify(context, null, 2)}
 
-${languageDirective(language)}`;
+${languageDirective(language)}${discreetDirective(business.discreet)}`;
 }
 
 /**
@@ -156,7 +167,7 @@ export function buildCampaignUserPrompt(context: CampaignAudienceContext): strin
 
 ${JSON.stringify(data, null, 2)}
 
-${languageDirective(context.language)}`;
+${languageDirective(context.language)}${discreetDirective(context.business.discreet)}`;
 }
 
 /**

@@ -12,7 +12,10 @@ import {
   markMessageSent,
   markMessageFailed,
 } from "@/lib/whatsapp/queries";
-import { decideSendMode, dispatchWhatsAppMessage } from "@/lib/whatsapp/send";
+import { dispatchWhatsAppMessage, messageRecordFields } from "@/lib/whatsapp/send";
+import { prepareWhatsAppSend } from "@/lib/templates/prepare";
+import { describePlan, planText } from "@/lib/templates/plan";
+import { purposeForOpportunityType } from "@/lib/templates/purpose";
 import { assertCanSendWhatsAppMessage, getWhatsAppReservationContext } from "@/lib/billing/limits";
 
 export const dynamic = "force-dynamic";
@@ -24,6 +27,9 @@ interface ParsedRequestBody {
   leadId: string | null;
   content: string;
   opportunityType: string | null;
+  /** Milestone 2 — return the send plan (free-form vs template, exact text)
+   * without sending anything, for the confirmation preview. */
+  dryRun: boolean;
 }
 
 function parseRequestBody(body: unknown): ParsedRequestBody | null {
@@ -39,7 +45,7 @@ function parseRequestBody(body: unknown): ParsedRequestBody | null {
   // constraint (see the Phase 13 migration) — never both, never neither.
   if (Boolean(customerId) === Boolean(leadId)) return null;
   if (!content) return null;
-  return { customerId, leadId, content, opportunityType };
+  return { customerId, leadId, content, opportunityType, dryRun: record.dryRun === true };
 }
 
 /**
@@ -90,6 +96,7 @@ export async function POST(request: Request) {
     // simply won't be found here (RLS + this explicit filter).
     let recipientName: string;
     let recipientPhone: string;
+    let recipientNameForTemplate: string | null;
     if (parsed.customerId) {
       const customer = await getCustomer(business.id, parsed.customerId);
       if (!customer) {
@@ -101,6 +108,7 @@ export async function POST(request: Request) {
         return NextResponse.json({ ok: false, error: consent.message }, { status: 403 });
       }
       recipientName = customer.name;
+      recipientNameForTemplate = customer.name;
       recipientPhone = customer.phone;
     } else {
       const lead = await getLead(business.id, parsed.leadId as string);
@@ -117,6 +125,7 @@ export async function POST(request: Request) {
         );
       }
       recipientName = lead.name || "there";
+      recipientNameForTemplate = lead.name;
       recipientPhone = lead.phone;
     }
 
@@ -156,9 +165,23 @@ export async function POST(request: Request) {
       );
     }
 
-    // 6. Validate the message/template — decide the send mode up front so
-    // the persisted record reflects what was actually attempted.
-    const decision = decideSendMode();
+    // 6. Milestone 2 — decide HOW this goes out: free-form inside the 24h
+    // customer service window, otherwise an approved template whose
+    // variables are filled from real data (the reviewed text may only fill
+    // an offer slot). Recorded on the message row as actually sent.
+    const plan = await prepareWhatsAppSend({
+      business,
+      recipient: { customerId: parsed.customerId, leadId: parsed.leadId, name: recipientNameForTemplate },
+      purpose: parsed.leadId ? "offer" : purposeForOpportunityType(parsed.opportunityType),
+      freeformText: parsed.content,
+    });
+    if (!plan.ok) {
+      return NextResponse.json({ ok: false, error: plan.error }, { status: 400 });
+    }
+    if (parsed.dryRun) {
+      return NextResponse.json({ ok: true, preview: describePlan(plan) });
+    }
+    const { messageType, templateName } = messageRecordFields(plan);
 
     // Phase 19 — duplicate-send protection AND the WhatsApp quota check
     // are now one atomic, database-locked reservation (see
@@ -171,9 +194,9 @@ export async function POST(request: Request) {
       customerId: parsed.customerId ?? undefined,
       leadId: parsed.leadId ?? undefined,
       opportunityType: parsed.opportunityType,
-      messageType: decision.messageType,
-      templateName: decision.templateName,
-      content: parsed.content,
+      messageType,
+      templateName,
+      content: planText(plan),
       periodStart: reservationContext.periodStart,
       limit: reservationContext.limit,
     });
@@ -192,10 +215,7 @@ export async function POST(request: Request) {
     const result = await dispatchWhatsAppMessage({
       phoneNumberId: connection.phone_number_id,
       to: normalizedPhone,
-      content: parsed.content,
-      customerFirstName: recipientName.split(" ")[0] || recipientName,
-      businessName: business.name,
-      decision,
+      plan,
     });
 
     if (!result.ok) {
