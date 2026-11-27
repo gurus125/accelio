@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { redactServiceNames } from "@/lib/templates/plan";
 import { isSupabaseConfigured } from "@/lib/config";
 import { getBusinessForCurrentUser } from "@/lib/business/queries";
 import { getCustomer, listEventsForCustomer } from "@/lib/customers/queries";
@@ -17,7 +18,7 @@ import type { LeadRow } from "@/types/database";
 export const dynamic = "force-dynamic";
 
 const VALID_TONES: readonly MessageTone[] = ["friendly", "professional", "warm"];
-const VALID_LANGUAGES: readonly MessageLanguage[] = ["english", "hinglish"];
+const VALID_LANGUAGES: readonly MessageLanguage[] = ["english", "hinglish", "hindi"];
 
 interface ParsedRequestBody {
   customerId: string | null;
@@ -175,11 +176,18 @@ export async function POST(request: Request) {
 
     const pattern = computeVisitPattern(customer.id, events);
 
+    // Milestone 2 — discreet mode: the AI never sees the service names
+    // (they're redacted from the engine's explanation) and is told not to
+    // mention one; anything that still slips through is redacted below.
+    const discreet = business.discreet_reminders === true;
+    const serviceNames = Array.from(new Set(events.map((e) => e.service).filter((s): s is string => Boolean(s))));
+
     const result = await generateMessage({
       business: {
         name: business.name,
         businessType: business.business_type,
         city: business.city,
+        discreet,
       },
       customer: {
         firstName: customer.name.split(" ")[0] || customer.name,
@@ -191,7 +199,7 @@ export async function POST(request: Request) {
       opportunity: {
         type: opportunity.type,
         recommendedAction: getRecommendedAction(opportunity.type),
-        reason: opportunity.explanation,
+        reason: discreet ? redactServiceNames(opportunity.explanation, serviceNames) : opportunity.explanation,
       },
       tone: parsed.tone,
       language: parsed.language,
@@ -202,6 +210,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: false, error: result.error }, { status: 502 });
     }
 
+    if (discreet) {
+      result.data.message = redactServiceNames(result.data.message, serviceNames);
+    }
     return NextResponse.json({ ok: true, data: result.data });
   } catch (error) {
     // Never leak stack traces / internal details to the client.

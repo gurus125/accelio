@@ -45,6 +45,25 @@ export function mentionsService(text: string, services: (string | null | undefin
   return null;
 }
 
+function escapeRegExp(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/** Replaces any of `services` named in `text` (whole words, any case) with
+ * a neutral word — for discreet mode, before text reaches the AI and on
+ * whatever comes back. */
+export function redactServiceNames(text: string, services: (string | null | undefined)[], replacement = "visit"): string {
+  let out = text;
+  const names = services
+    .map((s) => (s ?? "").trim())
+    .filter((s) => s.length >= 3)
+    .sort((a, b) => b.length - a.length);
+  for (const name of names) {
+    out = out.replace(new RegExp(`(^|[^\\p{L}\\p{N}])${escapeRegExp(name)}(?=$|[^\\p{L}\\p{N}])`, "giu"), `$1${replacement}`);
+  }
+  return out;
+}
+
 export type PlannerTemplate = Pick<
   MessageTemplateRow,
   "key" | "language" | "variant" | "name" | "meta_language_code" | "body" | "variables" | "status"

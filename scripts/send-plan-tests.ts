@@ -3,7 +3,8 @@
  * variable slots, discreet mode, languages. Run with `npm test`.
  */
 import { DEFAULT_TEMPLATES } from "@/lib/templates/catalog";
-import { describePlan, isInsideServiceWindow, mentionsService, planWhatsAppSend, type PlanInput, type PlannerTemplate } from "@/lib/templates/plan";
+import { describePlan, isInsideServiceWindow, mentionsService, planWhatsAppSend, redactServiceNames, type PlanInput, type PlannerTemplate } from "@/lib/templates/plan";
+import { buildUserPrompt } from "@/lib/ai/prompts";
 import { purposeForAutomationType, purposeForCampaignType, purposeForOpportunityType } from "@/lib/templates/purpose";
 
 let passed = 0;
@@ -99,6 +100,21 @@ eq(discreetOffer.ok, true, "discreet only restricts reminders, not offers the ow
 eq(mentionsService("Time for your eyebrow threading", ["Threading"]), "Threading", "service match is case-insensitive whole word");
 eq(mentionsService("Come back soon", ["Threading", "Wax"]), null, "no service named");
 eq(mentionsService("waxed", ["wax"]), null, "partial words don't match");
+
+// Discreet AI drafts: service names redacted before and after the AI.
+eq(redactServiceNames("Usually returns for Waxing every 25 days", ["waxing"]), "Usually returns for visit every 25 days", "redacts the service from the engine's reason");
+eq(redactServiceNames("Eyebrow threading or threading?", ["Threading", "Eyebrow threading"]), "visit or visit?", "longest names redacted first");
+eq(redactServiceNames("Come back soon!", ["Facial"]), "Come back soon!", "nothing to redact");
+const promptArgs = {
+  business: { name: "Glow", businessType: "Parlour", city: null, discreet: true },
+  customer: { firstName: "Asha", visitCount: 3, daysSinceLastVisit: 30, averageReturnDays: null, totalSpent: 0 },
+  opportunity: { type: "due_to_return" as const, recommendedAction: "Send a reminder", reason: "Due" },
+  tone: "friendly" as const,
+  language: "hindi" as const,
+};
+eq(buildUserPrompt(promptArgs).includes("discreet mode"), true, "discreet businesses get the no-service instruction");
+eq(buildUserPrompt({ ...promptArgs, business: { ...promptArgs.business, discreet: false } }).includes("discreet mode"), false, "other businesses don't");
+eq(buildUserPrompt(promptArgs).includes("Devanagari"), true, "Hindi drafts are requested in Devanagari");
 
 // Missing values are never sent blank.
 const missing = planWhatsAppSend({ ...base, values: { business_name: "X" } });
